@@ -217,6 +217,9 @@ def create_app(config_class=Config):
     
     swagger.init_app(app)
 
+    # Import models to ensure they are registered with SQLAlchemy
+    from app.models import User, Consumption
+
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.consumption import consumption_bp

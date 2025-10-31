@@ -5,14 +5,17 @@ This module contains the User model for handling user data in the database.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Boolean, DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app import db
+
+if TYPE_CHECKING:
+    from app.models.consumption import Consumption
 
 
 class User(db.Model):
@@ -44,6 +47,11 @@ class User(db.Model):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    # Relationships
+    consumptions: Mapped[list["Consumption"]] = relationship(
+        "Consumption", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __init__(self, username: str, email: str, password: str, **kwargs):
