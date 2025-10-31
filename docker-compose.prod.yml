@@ -1,0 +1,44 @@
+# Docker Compose for Production Deployment
+# Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  # Production overrides for PostgreSQL
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Remove port mapping for security (only internal access)
+    ports: []
+
+  # Production overrides for backend
+  backend:
+    restart: always
+    environment:
+      - FLASK_ENV=production
+      - DEBUG=false
+    # Remove volume mounts (use built image)
+    volumes:
+      - backend_logs:/app/logs
+    # Use production command
+    command: python main.py
+
+  # Production overrides for frontend
+  frontend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+    # Remove volume mounts (use built image)
+    volumes: []
+    # Use production command
+    command: npm start
+
+# Production volumes (more restrictive)
+volumes:
+  postgres_data:
+    driver: local
+  backend_logs:
+    driver: local
