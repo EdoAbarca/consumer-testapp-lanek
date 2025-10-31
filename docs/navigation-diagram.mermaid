@@ -1,0 +1,68 @@
+
+
+graph TD
+    %% Public Access
+    Landing[Landing Page]
+    Login[Login Page]
+
+    %% Protected MVP App (4 pages only)
+    subgraph "Protected Application"
+        Dashboard[Dashboard]
+        AddConsumption[Add Consumption]
+        ConsumptionList[Consumption List]
+        Profile[Profile]
+    end
+
+    %% Error Handling (Minimal)
+    subgraph "Error Pages"
+        NotFound[404 Page]
+        Unauthorized[Login Required]
+    end
+
+    %% MVP Navigation Flow
+    Landing -->|"Login Button"| Login
+    Login -->|"Valid Credentials"| Dashboard
+    Login -->|"Invalid Credentials"| Login
+    
+    %% Main App Navigation (Header Menu)
+    Dashboard <-->|"Header Navigation"| AddConsumption
+    Dashboard <-->|"Header Navigation"| ConsumptionList
+    Dashboard <-->|"User Menu"| Profile
+    
+    %% Quick Actions from Dashboard
+    Dashboard -->|"Add New Record"| AddConsumption
+    Dashboard -->|"View All Records"| ConsumptionList
+    
+    %% Form Flow
+    AddConsumption -->|"Save Success"| ConsumptionList
+    AddConsumption -->|"Cancel"| Dashboard
+    
+    %% List Actions (Minimal)
+    ConsumptionList -->|"Add New"| AddConsumption
+    ConsumptionList -->|"Back to Dashboard"| Dashboard
+    
+    %% Profile Management
+    Profile -->|"Back to Dashboard"| Dashboard
+    
+    %% Logout Flow (from any page)
+    Dashboard -->|"Logout"| Landing
+    Profile -->|"Logout"| Landing
+    
+    %% Error Handling
+    Dashboard -->|"Session Expired"| Login
+    AddConsumption -->|"No Auth"| Unauthorized
+    ConsumptionList -->|"No Auth"| Unauthorized
+    Unauthorized -->|"Login"| Login
+    
+    %% 404 Fallback
+    Landing -.->|"Invalid URL"| NotFound
+    NotFound -->|"Go Home"| Landing
+
+    %% Styling
+    classDef publicPage fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef mvpPage fill:#e8f5e8,stroke:#388e3c,stroke-width:3px
+    classDef errorPage fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+
+    class Landing,Login publicPage
+    class Dashboard,AddConsumption,ConsumptionList,Profile mvpPage
+    class NotFound,Unauthorized errorPage

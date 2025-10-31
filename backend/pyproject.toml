@@ -1,0 +1,177 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "consumer-testapp-lanek-backend"
+version = "1.0.0"
+description = "Backend API for Consumer Data Management System - Lanek Technical Test"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Developer", email = "developer@example.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    # Flask Core
+    "flask>=3.0.0",
+    "flask-sqlalchemy>=3.1.0",
+    "flask-migrate>=4.0.0",
+    "flask-cors>=4.0.0",
+    "flask-jwt-extended>=4.6.0",
+    
+    # Database
+    "psycopg2-binary>=2.9.0",
+    "sqlalchemy>=2.0.0",
+    
+    # Validation & Serialization
+    "pydantic>=2.5.0",
+    "marshmallow>=3.20.0",
+    
+    # Password Hashing
+    "bcrypt>=4.1.0",
+    "werkzeug>=3.0.0",
+    
+    # Environment Management
+    "python-dotenv>=1.0.0",
+    
+    # Date/Time Handling
+    "python-dateutil>=2.8.0",
+    
+    # HTTP Utilities
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-flask>=1.3.0",
+    "pytest-mock>=3.12.0",
+    
+    # Code Quality
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.7.0",
+    "pre-commit>=3.5.0",
+    
+    # Development Tools
+    "ipython>=8.17.0",
+    "pip-tools>=7.3.0",
+    
+    # Documentation
+    "sphinx>=7.2.0",
+    "sphinx-rtd-theme>=1.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/EdoAbarca/consumer-testapp-lanek"
+Documentation = "https://github.com/EdoAbarca/consumer-testapp-lanek/docs"
+Repository = "https://github.com/EdoAbarca/consumer-testapp-lanek.git"
+"Bug Tracker" = "https://github.com/EdoAbarca/consumer-testapp-lanek/issues"
+
+[project.scripts]
+consumer-api = "main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["app"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "flask_sqlalchemy.*",
+    "flask_migrate.*",
+    "flask_cors.*",
+    "flask_jwt_extended.*",
+    "psycopg2.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = [
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--strict-markers",
+    "-v"
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-flask>=1.3.0",
+    "pytest-mock>=3.12.0",
+    "black>=23.0.0",
+    "isort",
+    "pip-tools>=7.5.1",
+]

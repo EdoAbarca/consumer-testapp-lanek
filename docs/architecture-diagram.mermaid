@@ -1,0 +1,85 @@
+
+graph TB
+    %% User Interface
+    subgraph "Client Layer"
+        Browser[Web Browser]
+    end
+
+    %% Simplified Frontend (4 pages max)
+    subgraph "Frontend - Next.js (6 hours build)"
+        Login[Login Page]
+        Dashboard[Dashboard + Stats]
+        AddForm[Add Consumption Form]
+        ListView[List View]
+        AuthState[Auth Context]
+        APIClient[Axios Client]
+    end
+
+    %% Simplified Backend (minimal endpoints)
+    subgraph "Backend - Flask API (6 hours build)"
+        AuthEndpoint[POST /auth/login]
+        ConsumptionEndpoints[GET/POST /consumption]
+        StatsEndpoint[GET /stats]
+        JWTMiddleware[JWT Middleware]
+        UserFilter[User Data Isolation]
+    end
+
+    %% Minimal Database (2 tables only)
+    subgraph "Database - PostgreSQL"
+        UsersTable[(users table)]
+        ConsumptionTable[(consumption_records table)]
+    end
+
+    %% Docker Infrastructure (2 hours setup)
+    subgraph "Container Infrastructure"
+        DockerCompose[docker-compose.yml]
+        FrontendContainer[nextjs:latest]
+        BackendContainer[python:3.11]
+        DBContainer[postgres:15]
+    end
+
+    %% Core Data Flow (simplified)
+    Browser --> Login
+    Login --> AuthEndpoint
+    AuthEndpoint --> JWTMiddleware
+    JWTMiddleware --> UsersTable
+    
+    Browser --> Dashboard
+    Dashboard --> StatsEndpoint
+    StatsEndpoint --> UserFilter
+    UserFilter --> ConsumptionTable
+    
+    Browser --> AddForm
+    AddForm --> ConsumptionEndpoints
+    ConsumptionEndpoints --> UserFilter
+    
+    Browser --> ListView
+    ListView --> ConsumptionEndpoints
+    
+    %% Auth Flow
+    AuthState -.-> APIClient
+    APIClient -.-> AuthEndpoint
+    APIClient -.-> ConsumptionEndpoints
+    APIClient -.-> StatsEndpoint
+
+    %% Container Orchestration
+    DockerCompose --> FrontendContainer
+    DockerCompose --> BackendContainer  
+    DockerCompose --> DBContainer
+    
+    FrontendContainer --> Frontend
+    BackendContainer --> Backend
+    DBContainer --> Database
+
+    %% Styling for clarity
+    classDef mvpFocus fill:#4caf50,stroke:#2e7d32,stroke-width:3px
+    classDef frontend fill:#2196f3,stroke:#1565c0,stroke-width:2px
+    classDef backend fill:#ff9800,stroke:#e65100,stroke-width:2px
+    classDef database fill:#9c27b0,stroke:#6a1b9a,stroke-width:2px
+    classDef container fill:#607d8b,stroke:#37474f,stroke-width:2px
+
+    class Login,Dashboard,AddForm,ListView mvpFocus
+    class AuthState,APIClient,Frontend frontend
+    class AuthEndpoint,ConsumptionEndpoints,StatsEndpoint,JWTMiddleware,UserFilter,Backend backend
+    class UsersTable,ConsumptionTable,Database database
+    class DockerCompose,FrontendContainer,BackendContainer,DBContainer container
