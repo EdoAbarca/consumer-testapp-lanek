@@ -311,6 +311,96 @@ def create_app(config_class=Config):
                     },
                 },
             },
+            'ConsumptionResponse': {
+                'type': 'object',
+                'properties': {
+                    'id': {
+                        'type': 'integer',
+                        'description': 'Unique consumption record ID',
+                        'example': 1,
+                    },
+                    'user_id': {
+                        'type': 'integer', 
+                        'description': 'ID of the user who owns this record',
+                        'example': 1,
+                    },
+                    'date': {
+                        'type': 'string',
+                        'format': 'date-time',
+                        'description': 'ISO timestamp of consumption date',
+                        'example': '2023-10-31T10:00:00Z',
+                    },
+                    'value': {
+                        'type': 'number',
+                        'description': 'Consumption value',
+                        'example': 150.75,
+                    },
+                    'type': {
+                        'type': 'string',
+                        'enum': ['electricity', 'water', 'gas'],
+                        'description': 'Type of consumption',
+                        'example': 'electricity',
+                    },
+                    'notes': {
+                        'type': 'string',
+                        'description': 'Optional notes',
+                        'example': 'High usage due to air conditioning',
+                    },
+                    'created_at': {
+                        'type': 'string',
+                        'format': 'date-time',
+                        'description': 'ISO timestamp of record creation',
+                        'example': '2023-10-31T10:30:00Z',
+                    },
+                    'updated_at': {
+                        'type': 'string',
+                        'format': 'date-time',
+                        'description': 'ISO timestamp of last update',
+                        'example': '2023-10-31T10:30:00Z',
+                    },
+                },
+            },
+            'UserLoginRequest': {
+                'type': 'object',
+                'required': ['email', 'password'],
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'format': 'email',
+                        'description': 'User\'s email address',
+                        'example': 'user@example.com',
+                    },
+                    'password': {
+                        'type': 'string',
+                        'description': 'User\'s password',
+                        'example': 'SecurePass123!',
+                    },
+                },
+            },
+            'UserLoginResponse': {
+                'type': 'object',
+                'properties': {
+                    'access_token': {
+                        'type': 'string',
+                        'description': 'JWT access token',
+                        'example': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...',
+                    },
+                    'refresh_token': {
+                        'type': 'string',
+                        'description': 'JWT refresh token',
+                        'example': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...',
+                    },
+                    'user': {
+                        '$ref': '#/definitions/UserRegistrationResponse',
+                        'description': 'User information',
+                    },
+                    'message': {
+                        'type': 'string',
+                        'description': 'Success message',
+                        'example': 'Login successful',
+                    },
+                },
+            },
         },
     }
     
