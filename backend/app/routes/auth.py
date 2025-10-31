@@ -34,7 +34,7 @@ def auth_health():
     summary: Authentication service health check
     description: |
       Check if the authentication service is operational.
-      
+
       **curl example:**
       ```bash
       curl -X GET "http://localhost:5000/api/auth/health"
@@ -177,16 +177,14 @@ def register():
             # Handle validation errors properly
             errors = {}
             for error in e.errors():
-                field = error.get("loc", ["unknown"])[-1] if error.get("loc") else "unknown"
+                field = (
+                    error.get("loc", ["unknown"])[-1] if error.get("loc") else "unknown"
+                )
                 message = error.get("msg", "Validation error")
                 errors[str(field)] = message
-            
+
             return (
-                jsonify(
-                    ValidationErrorResponse(
-                        details=errors
-                    ).model_dump()
-                ),
+                jsonify(ValidationErrorResponse(details=errors).model_dump()),
                 400,
             )
 
@@ -410,16 +408,14 @@ def login():
             # Handle validation errors properly
             errors = {}
             for error in e.errors():
-                field = error.get("loc", ["unknown"])[-1] if error.get("loc") else "unknown"
+                field = (
+                    error.get("loc", ["unknown"])[-1] if error.get("loc") else "unknown"
+                )
                 message = error.get("msg", "Validation error")
                 errors[str(field)] = message
-            
+
             return (
-                jsonify(
-                    ValidationErrorResponse(
-                        details=errors
-                    ).model_dump()
-                ),
+                jsonify(ValidationErrorResponse(details=errors).model_dump()),
                 400,
             )
 
@@ -474,8 +470,8 @@ def login():
 
         # Prepare response
         response_data = UserLoginResponse(
-            access_token=tokens['access_token'],
-            refresh_token=tokens['refresh_token'],
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
             user=user_data,
         )
 

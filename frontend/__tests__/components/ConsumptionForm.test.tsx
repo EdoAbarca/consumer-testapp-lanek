@@ -39,14 +39,14 @@ describe('ConsumptionForm Component', () => {
     // Setup default mocks
     mockUseRouter.mockReturnValue({
       push: mockPush,
-    } as any);
+    } as unknown as ReturnType<typeof useRouter>);
     
     mockUseAuth.mockReturnValue({
       user: { id: 1, username: 'testuser', email: 'test@example.com' },
       accessToken: 'mock-token',
       isAuthenticated: true,
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof useAuth>);
   });
 
   it('renders form with all required fields', () => {
@@ -267,7 +267,7 @@ describe('ConsumptionForm Component', () => {
       accessToken: null,
       isAuthenticated: false,
       isLoading: false,
-    } as any);
+    } as unknown as ReturnType<typeof useAuth>);
     
     render(<ConsumptionForm />);
     

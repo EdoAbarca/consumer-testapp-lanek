@@ -18,8 +18,6 @@ import { consumptionApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import type {
   ConsumptionCreateRequest,
-  ConsumptionType,
-  ConsumptionValidationError,
 } from '@/types/consumption';
 import { getConsumptionTypeOptions } from '@/types/consumption';
 
@@ -53,7 +51,7 @@ interface ConsumptionFormProps {
 
 export default function ConsumptionForm({ onSuccess, onCancel }: ConsumptionFormProps) {
   const router = useRouter();
-  const { user, accessToken } = useAuth();
+  const { accessToken } = useAuth();
   const [submitError, setSubmitError] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -107,12 +105,13 @@ export default function ConsumptionForm({ onSuccess, onCancel }: ConsumptionForm
           router.push('/dashboard');
         }, 1500);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { error?: string; details?: Record<string, string>; message?: string };
       console.error('Consumption creation error:', error);
 
       // Handle validation errors
-      if (error.error === 'validation_error' && error.details) {
-        Object.entries(error.details).forEach(([field, message]) => {
+      if (apiError.error === 'validation_error' && apiError.details) {
+        Object.entries(apiError.details).forEach(([field, message]) => {
           setError(field as keyof ConsumptionFormData, {
             type: 'server',
             message: message as string,
@@ -120,7 +119,7 @@ export default function ConsumptionForm({ onSuccess, onCancel }: ConsumptionForm
         });
       } else {
         // Handle general errors
-        setSubmitError(error.message || 'Failed to create consumption record');
+        setSubmitError(apiError.message || 'Failed to create consumption record');
       }
     }
   };

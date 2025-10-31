@@ -21,7 +21,14 @@ jest.mock('axios', () => ({
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('API Client', () => {
-  let mockAxiosInstance: any;
+  let mockAxiosInstance: {
+    post: jest.Mock;
+    get: jest.Mock;
+    interceptors: {
+      request: { use: jest.Mock };
+      response: { use: jest.Mock };
+    };
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,7 +40,8 @@ describe('API Client', () => {
         response: { use: jest.fn() },
       },
     };
-    mockedAxios.create.mockReturnValue(mockAxiosInstance);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
   });
 
   describe('authApi.register', () => {

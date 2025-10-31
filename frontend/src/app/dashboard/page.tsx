@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +9,23 @@ import AnalyticsCards from '@/components/analytics/AnalyticsCards';
 import MonthlyConsumptionChart from '@/components/analytics/MonthlyConsumptionChart';
 import type { ConsumptionAnalytics } from '@/types/consumption';
 
-export default function DashboardPage() {
+// Loading component for Suspense fallback
+function DashboardLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center space-x-2">
+        <svg className="h-6 w-6 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span className="text-gray-600 dark:text-gray-400">Loading Dashboard...</span>
+      </div>
+    </div>
+  );
+}
+
+// Main dashboard component that uses useSearchParams
+function DashboardContent() {
   const { user, logout, isAuthenticated, isLoading, accessToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,9 +46,10 @@ export default function DashboardPage() {
         setAnalyticsError(null);
         const response = await consumptionApi.analytics(accessToken);
         setAnalytics(response.analytics);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load analytics data';
         console.error('Failed to fetch analytics:', error);
-        setAnalyticsError(error.message || 'Failed to load analytics data');
+        setAnalyticsError(errorMessage);
       } finally {
         setAnalyticsLoading(false);
       }
@@ -275,7 +292,7 @@ export default function DashboardPage() {
                     </h3>
                     <p className="text-blue-700 dark:text-blue-300 mt-1">
                       Add and manage your electricity, water, and gas consumption records.
-                      Click "Add Consumption Record" to get started.
+                      Click &ldquo;Add Consumption Record&rdquo; to get started.
                     </p>
                   </div>
                 </div>
@@ -307,5 +324,14 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Main exported component wrapped with Suspense
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   );
 }

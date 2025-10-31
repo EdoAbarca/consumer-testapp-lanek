@@ -123,7 +123,7 @@ export interface UserInfo {
 export interface ApiErrorResponse {
   error: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, string>;
 }
 
 /**
@@ -142,14 +142,15 @@ export const authApi = {
         userData
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw with typed error for better handling in components
+      const apiError = error as { data?: ApiErrorResponse; message?: string; status?: number };
       throw {
-        message: error.data?.message || error.message || 'Registration failed',
-        status: error.status,
-        error: error.data?.error,
-        details: error.data?.details,
-      } as ApiErrorResponse & { status?: number };
+        message: apiError.data?.message || apiError.message || 'Registration failed',
+        status: apiError.status,
+        error: apiError.data?.error,
+        details: apiError.data?.details,
+      } as ApiErrorResponse;
     }
   },
 
@@ -165,14 +166,15 @@ export const authApi = {
         loginData
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw with typed error for better handling in components
+      const apiError = error as { data?: ApiErrorResponse; message?: string; status?: number };
       throw {
-        message: error.data?.message || error.message || 'Login failed',
-        status: error.status,
-        error: error.data?.error,
-        details: error.data?.details,
-      } as ApiErrorResponse & { status?: number };
+        message: apiError.data?.message || apiError.message || 'Login failed',
+        status: apiError.status,
+        error: apiError.data?.error,
+        details: apiError.data?.details,
+      } as ApiErrorResponse;
     }
   },
 
@@ -229,23 +231,24 @@ export const consumptionApi = {
         }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle validation errors specifically
-      if (error.status === 400 && error.data?.error === 'validation_error') {
+      const apiError = error as { status?: number; data?: { error?: string; message?: string; details?: Record<string, string> } };
+      if (apiError.status === 400 && apiError.data?.error === 'validation_error') {
         throw {
-          error: error.data.error,
-          message: error.data.message,
-          details: error.data.details,
+          error: apiError.data.error,
+          message: apiError.data.message,
+          details: apiError.data.details,
         } as ConsumptionValidationError;
       }
       
       // Re-throw with typed error for better handling in components
       throw {
-        message: error.data?.message || error.message || 'Failed to create consumption record',
-        status: error.status,
-        error: error.data?.error,
-        details: error.data?.details,
-      } as ApiErrorResponse & { status?: number };
+        message: apiError.data?.message || 'Failed to create consumption record',
+        status: apiError.status,
+        error: apiError.data?.error,
+        details: apiError.data?.details,
+      } as ApiErrorResponse;
     }
   },
 
@@ -282,13 +285,14 @@ export const consumptionApi = {
         }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw with typed error for better handling in components
+      const apiError = error as { data?: { message?: string; error?: string; details?: Record<string, string> }; message?: string; status?: number };
       throw {
-        message: error.data?.message || error.message || 'Failed to fetch consumption records',
-        status: error.status,
-        error: error.data?.error,
-        details: error.data?.details,
+        message: apiError.data?.message || apiError.message || 'Failed to fetch consumption records',
+        status: apiError.status,
+        error: apiError.data?.error,
+        details: apiError.data?.details,
       } as ApiErrorResponse & { status?: number };
     }
   },
@@ -309,13 +313,14 @@ export const consumptionApi = {
         }
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw with typed error for better handling in components
+      const apiError = error as { data?: { message?: string; error?: string; details?: Record<string, string> }; message?: string; status?: number };
       throw {
-        message: error.data?.message || error.message || 'Failed to fetch analytics data',
-        status: error.status,
-        error: error.data?.error,
-        details: error.data?.details,
+        message: apiError.data?.message || apiError.message || 'Failed to fetch analytics data',
+        status: apiError.status,
+        error: apiError.data?.error,
+        details: apiError.data?.details,
       } as ApiErrorResponse & { status?: number };
     }
   },

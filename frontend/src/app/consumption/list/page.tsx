@@ -13,7 +13,7 @@
  * - Error handling
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { consumptionApi } from '@/lib/api';
@@ -31,7 +31,7 @@ interface LoadingState {
 
 export default function ConsumptionListPage() {
   const router = useRouter();
-  const { user, accessToken, isAuthenticated } = useAuth();
+  const { accessToken, isAuthenticated } = useAuth();
   
   const [consumptions, setConsumptions] = useState<ConsumptionRecord[]>([]);
   const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
@@ -50,7 +50,7 @@ export default function ConsumptionListPage() {
   }, [isAuthenticated, router]);
 
   // Fetch consumption records
-  const fetchConsumptions = async (page: number = 1) => {
+  const fetchConsumptions = useCallback(async (page: number = 1) => {
     if (!accessToken) return;
 
     setLoadingState({ isLoading: true, error: null });
@@ -64,24 +64,30 @@ export default function ConsumptionListPage() {
       setConsumptions(response.consumptions);
       setPagination(response.pagination);
       setCurrentPage(page);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load consumption records';
       console.error('Failed to fetch consumption records:', error);
       setLoadingState({ 
         isLoading: false, 
-        error: error.message || 'Failed to load consumption records' 
+        error: errorMessage 
       });
       return;
     }
 
     setLoadingState({ isLoading: false, error: null });
-  };
+  }, [accessToken]);
 
-  // Initial load
+  // Initial load effect
   useEffect(() => {
     if (isAuthenticated && accessToken) {
-      fetchConsumptions(1);
+      // Use setTimeout to defer the state update and avoid cascading renders
+      const timeoutId = setTimeout(() => {
+        fetchConsumptions(1);
+      }, 0);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated, accessToken, fetchConsumptions]);
 
   // Handle page changes
   const handlePageChange = (page: number) => {

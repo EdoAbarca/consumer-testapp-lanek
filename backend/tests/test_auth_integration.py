@@ -6,6 +6,7 @@ from HTTP request to database storage.
 """
 
 import json
+
 import pytest
 
 from app import create_app, db
@@ -50,19 +51,19 @@ class TestRegistrationIntegration:
             "username": "integrationuser",
             "email": "integration@example.com",
             "password": "IntegrationPass123!",
-            "confirm_password": "IntegrationPass123!"
+            "confirm_password": "IntegrationPass123!",
         }
 
         # Step 1: Make registration request
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         # Step 2: Verify API response
         assert response.status_code == 201
-        
+
         response_data = response.get_json()
         assert response_data is not None
         assert response_data["username"] == "integrationuser"
@@ -80,7 +81,9 @@ class TestRegistrationIntegration:
             assert user.email == "integration@example.com"
             assert user.is_active is True
             assert user.password_hash is not None
-            assert user.password_hash != "IntegrationPass123!"  # Password should be hashed
+            assert (
+                user.password_hash != "IntegrationPass123!"
+            )  # Password should be hashed
             assert user.check_password("IntegrationPass123!") is True
             assert user.check_password("WrongPassword") is False
 
@@ -100,14 +103,14 @@ class TestRegistrationIntegration:
             "username": "duplicatetest",
             "email": "duplicate@example.com",
             "password": "TestPass123!",
-            "confirm_password": "TestPass123!"
+            "confirm_password": "TestPass123!",
         }
 
         # Register first user
         response1 = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response1.status_code == 201
 
@@ -116,13 +119,13 @@ class TestRegistrationIntegration:
             "username": "differentuser",
             "email": "duplicate@example.com",  # Same email
             "password": "DifferentPass123!",
-            "confirm_password": "DifferentPass123!"
+            "confirm_password": "DifferentPass123!",
         }
 
         response2 = client.post(
             "/api/auth/register",
             data=json.dumps(duplicate_email_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response2.status_code == 400
 
@@ -131,13 +134,13 @@ class TestRegistrationIntegration:
             "username": "duplicatetest",  # Same username
             "email": "different@example.com",
             "password": "DifferentPass123!",
-            "confirm_password": "DifferentPass123!"
+            "confirm_password": "DifferentPass123!",
         }
 
         response3 = client.post(
             "/api/auth/register",
             data=json.dumps(duplicate_username_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response3.status_code == 400
 
@@ -155,13 +158,13 @@ class TestRegistrationIntegration:
             "username": "casetest",
             "email": "CaseTest@EXAMPLE.COM",
             "password": "CasePass123!",
-            "confirm_password": "CasePass123!"
+            "confirm_password": "CasePass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response.status_code == 201
 
@@ -175,13 +178,13 @@ class TestRegistrationIntegration:
             "username": "anotheruser",
             "email": "casetest@example.com",  # Lowercase version
             "password": "AnotherPass123!",
-            "confirm_password": "AnotherPass123!"
+            "confirm_password": "AnotherPass123!",
         }
 
         response2 = client.post(
             "/api/auth/register",
             data=json.dumps(duplicate_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response2.status_code == 400
 
@@ -195,20 +198,20 @@ class TestRegistrationIntegration:
                 "username": "user1",
                 "email": "user1@example.com",
                 "password": "Pass123!",
-                "confirm_password": "Pass123!"
+                "confirm_password": "Pass123!",
             },
             {
                 "username": "user2",
                 "email": "user2@example.com",
                 "password": "Pass456!",
-                "confirm_password": "Pass456!"
+                "confirm_password": "Pass456!",
             },
             {
                 "username": "user3",
                 "email": "user3@example.com",
                 "password": "Pass789!",
-                "confirm_password": "Pass789!"
-            }
+                "confirm_password": "Pass789!",
+            },
         ]
 
         # Register all users
@@ -216,7 +219,7 @@ class TestRegistrationIntegration:
             response = client.post(
                 "/api/auth/register",
                 data=json.dumps(user_data),
-                content_type="application/json"
+                content_type="application/json",
             )
             assert response.status_code == 201
 
@@ -229,9 +232,19 @@ class TestRegistrationIntegration:
             emails = {user.email for user in users}
 
             assert usernames == {"user1", "user2", "user3"}
-            assert emails == {"user1@example.com", "user2@example.com", "user3@example.com"}
+            assert emails == {
+                "user1@example.com",
+                "user2@example.com",
+                "user3@example.com",
+            }
 
             # Verify all passwords work
+            password_map = {
+                "user1": "Pass123!",
+                "user2": "Pass456!",
+                "user3": "Pass789!",
+            }
+
             for user in users:
-                expected_password = f"Pass{user.username[-1]}{'23' if user.username[-1] == '1' else '56' if user.username[-1] == '2' else '89'}!"
+                expected_password = password_map[user.username]
                 assert user.check_password(expected_password) is True

@@ -8,8 +8,30 @@ import MonthlyConsumptionChart from '../../src/components/analytics/MonthlyConsu
 import type { MonthlyConsumption } from '../../src/types/consumption';
 
 // Mock Chart.js to avoid canvas issues in tests
+interface MockChartData {
+  labels?: string[];
+  datasets?: Array<{
+    label: string;
+    data: number[];
+    backgroundColor: string;
+  }>;
+}
+
+interface MockChartOptions {
+  plugins?: {
+    title?: {
+      text?: string;
+    };
+  };
+}
+
+interface MockBarChartProps {
+  data: MockChartData;
+  options: MockChartOptions;
+}
+
 jest.mock('react-chartjs-2', () => ({
-  Bar: ({ data, options }: any) => {
+  Bar: ({ data, options }: MockBarChartProps) => {
     return (
       <div data-testid="bar-chart">
         <div data-testid="chart-title">{options?.plugins?.title?.text}</div>
@@ -88,19 +110,19 @@ describe('MonthlyConsumptionChart Component', () => {
       expect(datasets).toHaveLength(3);
       
       // Check electricity dataset
-      const electricityDataset = datasets.find((d: any) => d.label === 'Electricity');
+      const electricityDataset = datasets.find((d: { label: string; data: number[]; backgroundColor: string }) => d.label === 'Electricity');
       expect(electricityDataset).toBeDefined();
       expect(electricityDataset.data).toEqual([120.0, 140.0, 150.75]);
       expect(electricityDataset.backgroundColor).toBe('rgba(59, 130, 246, 0.6)');
       
       // Check water dataset
-      const waterDataset = datasets.find((d: any) => d.label === 'Water');
+      const waterDataset = datasets.find((d: { label: string; data: number[]; backgroundColor: string }) => d.label === 'Water');
       expect(waterDataset).toBeDefined();
       expect(waterDataset.data).toEqual([0.0, 80.0, 85.5]);
       expect(waterDataset.backgroundColor).toBe('rgba(16, 185, 129, 0.6)');
       
       // Check gas dataset
-      const gasDataset = datasets.find((d: any) => d.label === 'Gas');
+      const gasDataset = datasets.find((d: { label: string; data: number[]; backgroundColor: string }) => d.label === 'Gas');
       expect(gasDataset).toBeDefined();
       expect(gasDataset.data).toEqual([0.0, 0.0, 45.25]);
       expect(gasDataset.backgroundColor).toBe('rgba(245, 158, 11, 0.6)');
@@ -148,12 +170,12 @@ describe('MonthlyConsumptionChart Component', () => {
 
   describe('with undefined/null data', () => {
     it('handles undefined data gracefully', () => {
-      render(<MonthlyConsumptionChart data={undefined as any} />);
+      render(<MonthlyConsumptionChart data={undefined as unknown as MonthlyConsumption[]} />);
       expect(screen.getByText('No consumption data available')).toBeInTheDocument();
     });
 
     it('handles null data gracefully', () => {
-      render(<MonthlyConsumptionChart data={null as any} />);
+      render(<MonthlyConsumptionChart data={null as unknown as MonthlyConsumption[]} />);
       expect(screen.getByText('No consumption data available')).toBeInTheDocument();
     });
   });
@@ -194,7 +216,7 @@ describe('MonthlyConsumptionChart Component', () => {
       const datasetsElement = screen.getByTestId('chart-datasets');
       const datasets = JSON.parse(datasetsElement.textContent || '[]');
       
-      datasets.forEach((dataset: any) => {
+      datasets.forEach((dataset: { label: string; data: number[]; backgroundColor: string }) => {
         expect(dataset.data).toEqual([0.0]);
       });
     });
@@ -241,7 +263,7 @@ describe('MonthlyConsumptionChart Component', () => {
       const datasetsElement = screen.getByTestId('chart-datasets');
       const datasets = JSON.parse(datasetsElement.textContent || '[]');
       
-      const electricityDataset = datasets.find((d: any) => d.label === 'Electricity');
+      const electricityDataset = datasets.find((d: { label: string; data: number[]; backgroundColor: string }) => d.label === 'Electricity');
       expect(electricityDataset.data[0]).toBe(600000.00);
     });
   });

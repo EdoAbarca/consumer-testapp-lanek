@@ -6,8 +6,9 @@ functionality including validation, error handling, and database operations.
 """
 
 import json
-import pytest
 from datetime import timedelta
+
+import pytest
 from flask import Flask
 
 from app import create_app, db
@@ -73,13 +74,13 @@ class TestUserRegistration:
             "username": "testuser",
             "email": "test@example.com",
             "password": "SecurePass123!",
-            "confirm_password": "SecurePass123!"
+            "confirm_password": "SecurePass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 201
@@ -104,9 +105,9 @@ class TestLoginEndpoint:
             "username": "testuser",
             "email": "test@example.com",
             "password": "testpass123",
-            "confirm_password": "testpass123"
+            "confirm_password": "testpass123",
         }
-        
+
         client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
@@ -114,10 +115,7 @@ class TestLoginEndpoint:
         )
 
         # Now test login
-        login_data = {
-            "email": "test@example.com",
-            "password": "testpass123"
-        }
+        login_data = {"email": "test@example.com", "password": "testpass123"}
 
         response = client.post(
             "/api/auth/login",
@@ -148,10 +146,7 @@ class TestLoginEndpoint:
 
     def test_login_invalid_email(self, client):
         """Test login with non-existent email."""
-        login_data = {
-            "email": "nonexistent@example.com",
-            "password": "testpass123"
-        }
+        login_data = {"email": "nonexistent@example.com", "password": "testpass123"}
 
         response = client.post(
             "/api/auth/login",
@@ -171,9 +166,9 @@ class TestLoginEndpoint:
             "username": "testuser",
             "email": "test@example.com",
             "password": "testpass123",
-            "confirm_password": "testpass123"
+            "confirm_password": "testpass123",
         }
-        
+
         client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
@@ -181,10 +176,7 @@ class TestLoginEndpoint:
         )
 
         # Now test login with wrong password
-        login_data = {
-            "email": "test@example.com",
-            "password": "wrongpassword"
-        }
+        login_data = {"email": "test@example.com", "password": "wrongpassword"}
 
         response = client.post(
             "/api/auth/login",
@@ -204,9 +196,9 @@ class TestLoginEndpoint:
             "username": "testuser",
             "email": "test@example.com",
             "password": "testpass123",
-            "confirm_password": "testpass123"
+            "confirm_password": "testpass123",
         }
-        
+
         client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
@@ -220,10 +212,7 @@ class TestLoginEndpoint:
             db.session.commit()
 
         # Now test login
-        login_data = {
-            "email": "test@example.com",
-            "password": "testpass123"
-        }
+        login_data = {"email": "test@example.com", "password": "testpass123"}
 
         response = client.post(
             "/api/auth/login",
@@ -238,10 +227,7 @@ class TestLoginEndpoint:
 
     def test_login_missing_content_type(self, client):
         """Test login without proper content-type header."""
-        login_data = {
-            "email": "test@example.com",
-            "password": "testpass123"
-        }
+        login_data = {"email": "test@example.com", "password": "testpass123"}
 
         response = client.post(
             "/api/auth/login",
@@ -284,10 +270,7 @@ class TestLoginEndpoint:
         assert "details" in json_response
 
         # Test invalid email format
-        login_data = {
-            "email": "invalid-email",
-            "password": "testpass123"
-        }
+        login_data = {"email": "invalid-email", "password": "testpass123"}
 
         response = client.post(
             "/api/auth/login",
@@ -311,19 +294,16 @@ class TestProtectedRoutes:
             "username": "testuser",
             "email": "test@example.com",
             "password": "testpass123",
-            "confirm_password": "testpass123"
+            "confirm_password": "testpass123",
         }
-        
+
         client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
             content_type="application/json",
         )
 
-        login_data = {
-            "email": "test@example.com",
-            "password": "testpass123"
-        }
+        login_data = {"email": "test@example.com", "password": "testpass123"}
 
         login_response = client.post(
             "/api/auth/login",
@@ -338,7 +318,7 @@ class TestProtectedRoutes:
         # Now access protected route with token
         response = client.get(
             "/api/consumption/dashboard",
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers={"Authorization": f"Bearer {access_token}"},
         )
 
         assert response.status_code == 200
@@ -360,19 +340,12 @@ class TestProtectedRoutes:
         """Test accessing protected route with invalid token."""
         response = client.get(
             "/api/consumption/dashboard",
-            headers={"Authorization": "Bearer invalid_token_here"}
+            headers={"Authorization": "Bearer invalid_token_here"},
         )
 
         assert response.status_code == 401
         json_response = json.loads(response.data)
         assert json_response["error"] == "invalid_token"
-
-        # Verify user was created in database
-        user = User.query.filter_by(email="test@example.com").first()
-        assert user is not None
-        assert user.username == "testuser"
-        assert user.email == "test@example.com"
-        assert user.check_password("SecurePass123!")
 
     def test_duplicate_email_registration(self, client):
         """Test registration with an email that already exists."""
@@ -381,13 +354,13 @@ class TestProtectedRoutes:
             "username": "firstuser",
             "email": "test@example.com",
             "password": "SecurePass123!",
-            "confirm_password": "SecurePass123!"
+            "confirm_password": "SecurePass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response.status_code == 201
 
@@ -396,13 +369,13 @@ class TestProtectedRoutes:
             "username": "seconduser",
             "email": "test@example.com",  # Same email
             "password": "AnotherPass123!",
-            "confirm_password": "AnotherPass123!"
+            "confirm_password": "AnotherPass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(duplicate_data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -419,13 +392,13 @@ class TestProtectedRoutes:
             "username": "testuser",
             "email": "first@example.com",
             "password": "SecurePass123!",
-            "confirm_password": "SecurePass123!"
+            "confirm_password": "SecurePass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
         assert response.status_code == 201
 
@@ -434,13 +407,13 @@ class TestProtectedRoutes:
             "username": "testuser",  # Same username
             "email": "second@example.com",
             "password": "AnotherPass123!",
-            "confirm_password": "AnotherPass123!"
+            "confirm_password": "AnotherPass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(duplicate_data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -456,13 +429,13 @@ class TestProtectedRoutes:
             "username": "testuser",
             "email": "test@example.com",
             "password": "SecurePass123!",
-            "confirm_password": "DifferentPass123!"
+            "confirm_password": "DifferentPass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -479,13 +452,13 @@ class TestProtectedRoutes:
             "username": "testuser",
             "email": "invalid-email-format",
             "password": "SecurePass123!",
-            "confirm_password": "SecurePass123!"
+            "confirm_password": "SecurePass123!",
         }
 
         response = client.post(
             "/api/auth/register",
             data=json.dumps(registration_data),
-            content_type="application/json"
+            content_type="application/json",
         )
 
         assert response.status_code == 400
@@ -499,18 +472,9 @@ class TestProtectedRoutes:
     def test_weak_password_validation(self, client):
         """Test registration with passwords that don't meet strength requirements."""
         test_cases = [
-            {
-                "password": "short",
-                "expected_error": "at least 8 characters"
-            },
-            {
-                "password": "NoNumbers!",
-                "expected_error": "at least one number"
-            },
-            {
-                "password": "12345678",
-                "expected_error": "at least one letter"
-            }
+            {"password": "short", "expected_error": "at least 8 characters"},
+            {"password": "NoNumbers!", "expected_error": "at least one number"},
+            {"password": "12345678", "expected_error": "at least one letter"},
         ]
 
         for case in test_cases:
@@ -518,13 +482,13 @@ class TestProtectedRoutes:
                 "username": "testuser",
                 "email": "test@example.com",
                 "password": case["password"],
-                "confirm_password": case["password"]
+                "confirm_password": case["password"],
             }
 
             response = client.post(
                 "/api/auth/register",
                 data=json.dumps(registration_data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
             assert response.status_code == 400
@@ -541,7 +505,7 @@ class TestProtectedRoutes:
             "user@invalid",
             "user#invalid",
             "",
-            "ab"  # Too short
+            "ab",  # Too short
         ]
 
         for username in test_cases:
@@ -549,13 +513,13 @@ class TestProtectedRoutes:
                 "username": username,
                 "email": "test@example.com",
                 "password": "SecurePass123!",
-                "confirm_password": "SecurePass123!"
+                "confirm_password": "SecurePass123!",
             }
 
             response = client.post(
                 "/api/auth/register",
                 data=json.dumps(registration_data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
             assert response.status_code == 400
@@ -569,20 +533,22 @@ class TestProtectedRoutes:
         test_cases = [
             {},  # All fields missing
             {"username": "testuser"},  # Missing email, password, confirm_password
-            {"email": "test@example.com"},  # Missing username, password, confirm_password
+            {
+                "email": "test@example.com"
+            },  # Missing username, password, confirm_password
             {"username": "testuser", "email": "test@example.com"},  # Missing passwords
             {
                 "username": "testuser",
                 "email": "test@example.com",
-                "password": "SecurePass123!"
-            }  # Missing confirm_password
+                "password": "SecurePass123!",
+            },  # Missing confirm_password
         ]
 
         for registration_data in test_cases:
             response = client.post(
                 "/api/auth/register",
                 data=json.dumps(registration_data),
-                content_type="application/json"
+                content_type="application/json",
             )
 
             assert response.status_code == 400
@@ -594,9 +560,7 @@ class TestProtectedRoutes:
     def test_invalid_json_payload(self, client):
         """Test registration with invalid JSON payload."""
         response = client.post(
-            "/api/auth/register",
-            data="invalid json",
-            content_type="application/json"
+            "/api/auth/register", data="invalid json", content_type="application/json"
         )
 
         assert response.status_code == 400
@@ -612,12 +576,12 @@ class TestProtectedRoutes:
             "username": "testuser",
             "email": "test@example.com",
             "password": "SecurePass123!",
-            "confirm_password": "SecurePass123!"
+            "confirm_password": "SecurePass123!",
         }
 
         response = client.post(
             "/api/auth/register",
-            data=json.dumps(registration_data)
+            data=json.dumps(registration_data),
             # Missing content_type="application/json"
         )
 
@@ -637,9 +601,7 @@ class TestUserModel:
         """Test User model creation and basic functionality."""
         with app.app_context():
             user = User(
-                username="testuser",
-                email="test@example.com",
-                password="SecurePass123!"
+                username="testuser", email="test@example.com", password="SecurePass123!"
             )
 
             assert user.username == "testuser"
@@ -652,9 +614,7 @@ class TestUserModel:
         """Test password hashing and verification."""
         with app.app_context():
             user = User(
-                username="testuser",
-                email="test@example.com",
-                password="SecurePass123!"
+                username="testuser", email="test@example.com", password="SecurePass123!"
             )
 
             # Password should be hashed
@@ -668,9 +628,7 @@ class TestUserModel:
         """Test that email addresses are normalized to lowercase."""
         with app.app_context():
             user = User(
-                username="testuser",
-                email="Test@EXAMPLE.COM",
-                password="SecurePass123!"
+                username="testuser", email="Test@EXAMPLE.COM", password="SecurePass123!"
             )
 
             assert user.email == "test@example.com"
@@ -679,9 +637,7 @@ class TestUserModel:
         """Test User model class methods for finding users."""
         with app.app_context():
             user = User(
-                username="testuser",
-                email="test@example.com",
-                password="SecurePass123!"
+                username="testuser", email="test@example.com", password="SecurePass123!"
             )
             db.session.add(user)
             db.session.commit()
@@ -708,9 +664,7 @@ class TestUserModel:
         """Test User model to_dict method."""
         with app.app_context():
             user = User(
-                username="testuser",
-                email="test@example.com",
-                password="SecurePass123!"
+                username="testuser", email="test@example.com", password="SecurePass123!"
             )
             db.session.add(user)
             db.session.commit()
@@ -733,9 +687,7 @@ class TestUserModel:
         """Test User model string representation."""
         with app.app_context():
             user = User(
-                username="testuser",
-                email="test@example.com",
-                password="SecurePass123!"
+                username="testuser", email="test@example.com", password="SecurePass123!"
             )
 
             repr_str = repr(user)
@@ -754,7 +706,7 @@ class TestUserRegistrationSchema:
             "username": "testuser",
             "email": "test@example.com",
             "password": "SecurePass123!",
-            "confirm_password": "SecurePass123!"
+            "confirm_password": "SecurePass123!",
         }
 
         schema = UserRegistrationRequest.model_validate(valid_data)
@@ -765,8 +717,9 @@ class TestUserRegistrationSchema:
 
     def test_username_validation(self):
         """Test username validation rules."""
-        from app.schemas import UserRegistrationRequest
         from pydantic import ValidationError
+
+        from app.schemas import UserRegistrationRequest
 
         # Test valid usernames
         valid_usernames = ["testuser", "test_user", "test-user", "user123", "123user"]
@@ -775,7 +728,7 @@ class TestUserRegistrationSchema:
                 "username": username,
                 "email": "test@example.com",
                 "password": "SecurePass123!",
-                "confirm_password": "SecurePass123!"
+                "confirm_password": "SecurePass123!",
             }
             schema = UserRegistrationRequest.model_validate(data)
             assert schema.username == username.lower()
@@ -787,7 +740,7 @@ class TestUserRegistrationSchema:
                 "username": username,
                 "email": "test@example.com",
                 "password": "SecurePass123!",
-                "confirm_password": "SecurePass123!"
+                "confirm_password": "SecurePass123!",
             }
             with pytest.raises(ValidationError):
                 UserRegistrationRequest.model_validate(data)

@@ -5,7 +5,7 @@ This module contains the User model for handling user data in the database.
 """
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import bcrypt
 from flask_sqlalchemy import SQLAlchemy
@@ -81,7 +81,9 @@ class User(db.Model):
         """
         # Generate a salt and hash the password
         salt = bcrypt.gensalt()
-        self.password_hash = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+        self.password_hash = bcrypt.hashpw(password.encode("utf-8"), salt).decode(
+            "utf-8"
+        )
 
     def check_password(self, password: str) -> bool:
         """

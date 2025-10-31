@@ -27,18 +27,18 @@ jest.mock('../../src/lib/api', () => ({
 }));
 
 jest.mock('../src/components/analytics/AnalyticsCards', () => {
-  return function MockAnalyticsCards({ analytics }: any) {
+  return function MockAnalyticsCards({ analytics }: { analytics: AnalyticsResponse }) {
     return (
       <div data-testid="analytics-cards">
-        <div data-testid="total-consumption">{analytics.total_consumption}</div>
-        <div data-testid="total-records">{analytics.total_records}</div>
+        <div data-testid="total-consumption">{analytics.analytics.total_consumption}</div>
+        <div data-testid="total-records">{analytics.analytics.total_records}</div>
       </div>
     );
   };
 });
 
 jest.mock('../src/components/analytics/MonthlyConsumptionChart', () => {
-  return function MockMonthlyConsumptionChart({ data, title }: any) {
+  return function MockMonthlyConsumptionChart({ data, title }: { data: unknown[]; title: string }) {
     return (
       <div data-testid="monthly-chart">
         <div data-testid="chart-title">{title}</div>
@@ -101,11 +101,11 @@ describe('Dashboard Page with Analytics', () => {
     // Setup default mocks
     mockUseRouter.mockReturnValue({
       push: mockPush,
-    } as any);
+    } as unknown as ReturnType<typeof useRouter>);
     
     mockUseSearchParams.mockReturnValue({
       get: mockGet,
-    } as any);
+    } as unknown as ReturnType<typeof useSearchParams>);
 
     mockUseAuth.mockReturnValue({
       user: { 
@@ -119,7 +119,7 @@ describe('Dashboard Page with Analytics', () => {
       isAuthenticated: true,
       isLoading: false,
       logout: jest.fn(),
-    } as any);
+    } as unknown as ReturnType<typeof useAuth>);
 
     mockGet.mockReturnValue(null);
   });
@@ -270,7 +270,7 @@ describe('Dashboard Page with Analytics', () => {
         accessToken: null,
         isAuthenticated: false,
         isLoading: false,
-      } as any);
+      } as unknown as ReturnType<typeof useAuth>);
       
       render(<DashboardPage />);
       
@@ -283,7 +283,7 @@ describe('Dashboard Page with Analytics', () => {
         accessToken: null,
         isAuthenticated: true,
         isLoading: false,
-      } as any);
+      } as unknown as ReturnType<typeof useAuth>);
       
       render(<DashboardPage />);
       
@@ -303,7 +303,7 @@ describe('Dashboard Page with Analytics', () => {
         isAuthenticated: true,
         isLoading: false,
         logout: jest.fn(),
-      } as any);
+      } as unknown as ReturnType<typeof useAuth>);
       
       mockAnalyticsApi.mockResolvedValue(mockAnalyticsResponse);
       
