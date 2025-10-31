@@ -327,7 +327,9 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
+    { name = "flake8" },
     { name = "isort" },
+    { name = "mypy" },
     { name = "pip-tools" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -370,7 +372,9 @@ provides-extras = ["dev"]
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=23.0.0" },
+    { name = "flake8", specifier = ">=7.3.0" },
     { name = "isort" },
+    { name = "mypy", specifier = ">=1.18.2" },
     { name = "pip-tools", specifier = ">=7.5.1" },
     { name = "pytest", specifier = ">=7.4.0" },
     { name = "pytest-cov", specifier = ">=4.1.0" },

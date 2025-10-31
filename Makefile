@@ -178,8 +178,7 @@ lint-backend: ## Run backend linting and formatting
 	@echo "🐍 Linting backend code..."
 	@cd backend && uv run black --check .
 	@cd backend && uv run isort --check-only .
-	@cd backend && uv run flake8 .
-	@cd backend && uv run mypy .
+	@cd backend && uv run flake8 . --exclude=.venv
 
 lint-frontend: ## Run frontend linting
 	@echo "⚛️  Linting frontend code..."

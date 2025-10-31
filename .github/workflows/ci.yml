@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  # Use BuildKit for better caching
+  DOCKER_BUILDKIT: 1
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
@@ -25,7 +29,8 @@ jobs:
           - 5432:5432
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -35,23 +40,34 @@ jobs:
     - name: Set up Python
       run: uv python install 3.11
     
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: backend/.venv
+        key: ${{ runner.os }}-python-${{ hashFiles('backend/pyproject.toml', 'backend/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-python-
+    
     - name: Install backend dependencies
-      run: |
-        cd backend
-        uv sync
+      run: make install-backend
+    
+    - name: Lint backend code
+      run: make lint-backend
     
     - name: Run backend tests
-      run: |
-        cd backend
-        uv run pytest
+      run: make test-backend
       env:
         DATABASE_URL: postgresql://postgres:password@localhost:5432/test_db
+    
+    - name: Build backend
+      run: make build-backend
 
   frontend-tests:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -60,22 +76,158 @@ jobs:
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
     
-    - name: Install frontend dependencies
-      run: |
-        cd frontend
-        npm ci
+    - name: Cache Node.js dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          frontend/node_modules
+          frontend/.next/cache
+        key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
+        restore-keys: |
+          ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-
+          ${{ runner.os }}-nextjs-
     
-    - name: Run frontend linting
-      run: |
-        cd frontend
-        npm run lint
+    - name: Install frontend dependencies
+      run: make install-frontend
+    
+    - name: Lint frontend code
+      run: make lint-frontend
     
     - name: Run frontend tests
-      run: |
-        cd frontend
-        npm run test
+      run: make test-frontend
     
     - name: Build frontend
+      run: make build-frontend
+
+  docker-validation:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+    
+    - name: Build and validate Docker images
+      run: make docker-build
+    
+    - name: Test Docker containers startup
+      run: |
+        echo "🐳 Testing Docker containers can start successfully..."
+        make docker-up
+        sleep 30  # Give containers time to start
+        
+        echo "🔍 Checking container health..."
+        if ! make docker-health; then
+          echo "❌ Health check failed, showing container logs..."
+          make docker-logs
+          exit 1
+        fi
+        
+        echo "✅ Docker containers started successfully"
+        make docker-down
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: Run npm audit for frontend
       run: |
         cd frontend
-        npm run build
+        npm audit --audit-level high
+    
+    - name: Check for Python security issues
+      run: |
+        cd backend
+        uv add --dev safety
+        uv run safety check
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [docker-validation]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Start application stack
+      run: |
+        make docker-up
+        sleep 45  # Give more time for full stack startup
+    
+    - name: Run health checks
+      run: |
+        echo "🏥 Running comprehensive health checks..."
+        make docker-health
+        
+        echo "🔍 Testing API endpoints..."
+        # Test backend health endpoint
+        curl -f http://localhost:5000/health || exit 1
+        curl -f http://localhost:5000/api/health || exit 1
+        
+        echo "🌐 Testing frontend accessibility..."
+        # Test frontend is accessible
+        curl -f http://localhost:3000 || exit 1
+        
+        echo "✅ All integration tests passed"
+    
+    - name: Cleanup
+      if: always()
+      run: make docker-down
+
+  build-summary:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, docker-validation, security-scan, integration-tests]
+    if: always()
+    
+    steps:
+    - name: Build Summary
+      run: |
+        echo "🎉 CI Pipeline Summary:"
+        echo "Backend Tests: ${{ needs.backend-tests.result }}"
+        echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
+        echo "Docker Validation: ${{ needs.docker-validation.result }}"
+        echo "Security Scan: ${{ needs.security-scan.result }}"
+        echo "Integration Tests: ${{ needs.integration-tests.result }}"
+        
+        if [[ "${{ needs.backend-tests.result }}" == "success" && \
+              "${{ needs.frontend-tests.result }}" == "success" && \
+              "${{ needs.docker-validation.result }}" == "success" && \
+              "${{ needs.security-scan.result }}" == "success" && \
+              "${{ needs.integration-tests.result }}" == "success" ]]; then
+          echo "✅ All checks passed! Ready for deployment."
+        else
+          echo "❌ Some checks failed. Please review and fix."
+          exit 1
+        fi
