@@ -81,6 +81,35 @@ export interface UserRegistrationResponse {
 }
 
 /**
+ * User Login Request Interface
+ */
+export interface UserLoginRequest {
+  email: string;
+  password: string;
+}
+
+/**
+ * User Login Response Interface
+ */
+export interface UserLoginResponse {
+  access_token: string;
+  refresh_token: string;
+  user: UserRegistrationResponse;
+  message: string;
+}
+
+/**
+ * User Information Interface (for authenticated user data)
+ */
+export interface UserInfo {
+  id: number;
+  username: string;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+/**
  * API Error Response Interface
  */
 export interface ApiErrorResponse {
@@ -109,6 +138,29 @@ export const authApi = {
       // Re-throw with typed error for better handling in components
       throw {
         message: error.data?.message || error.message || 'Registration failed',
+        status: error.status,
+        error: error.data?.error,
+        details: error.data?.details,
+      } as ApiErrorResponse & { status?: number };
+    }
+  },
+
+  /**
+   * Login user with email and password
+   * @param loginData User login credentials
+   * @returns Promise with login response containing JWT tokens
+   */
+  login: async (loginData: UserLoginRequest): Promise<UserLoginResponse> => {
+    try {
+      const response = await apiClient.post<UserLoginResponse>(
+        '/api/auth/login',
+        loginData
+      );
+      return response.data;
+    } catch (error: any) {
+      // Re-throw with typed error for better handling in components
+      throw {
+        message: error.data?.message || error.message || 'Login failed',
         status: error.status,
         error: error.data?.error,
         details: error.data?.details,
