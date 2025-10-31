@@ -97,8 +97,7 @@ describe('AnalyticsCards Component', () => {
 
     it('shows increase indicator when current month is higher', () => {
       // Should show red arrow for increase
-      const increaseElements = screen.getAllByRole('presentation', { hidden: true });
-      const hasIncreaseArrow = increaseElements.some(element => 
+      const hasIncreaseArrow = Array.from(document.querySelectorAll('path')).some(element => 
         element.getAttribute('d')?.includes('M7 17l9.2-9.2M17 17V7m0 10H7')
       );
       expect(hasIncreaseArrow).toBe(true);
@@ -124,7 +123,6 @@ describe('AnalyticsCards Component', () => {
     });
 
     it('displays zero values correctly', () => {
-      expect(screen.getByText('0.00')).toBeInTheDocument(); // Total consumption
       expect(screen.getAllByText('0.00')).toHaveLength(6); // Total, average, current month, and 3 consumption types
     });
 
@@ -152,8 +150,8 @@ describe('AnalyticsCards Component', () => {
       // Should show green arrow for decrease (good for consumption)
       expect(screen.getByText('50.0%')).toBeInTheDocument();
       
-      const decreaseElements = screen.getAllByRole('presentation', { hidden: true });
-      const hasDecreaseArrow = decreaseElements.some(element => 
+      // Find the SVG path elements directly
+      const hasDecreaseArrow = Array.from(document.querySelectorAll('path')).some(element => 
         element.getAttribute('d')?.includes('M17 7l-9.2 9.2M7 7v10m0-10h10')
       );
       expect(hasDecreaseArrow).toBe(true);
