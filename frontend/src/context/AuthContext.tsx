@@ -8,7 +8,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, UserInfo, UserLoginRequest, ApiErrorResponse } from '@/lib/api';
+import { authApi, UserInfo, UserLoginRequest } from '@/lib/api';
 
 /**
  * Authentication state interface
@@ -63,6 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
 
   /**
+   * Clear authentication data from localStorage
+   */
+  const clearAuthStorage = () => {
+    localStorage.removeItem(TOKEN_STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(TOKEN_STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(TOKEN_STORAGE_KEYS.USER_INFO);
+  };
+
+  /**
    * Load authentication state from localStorage on mount
    */
   useEffect(() => {
@@ -95,15 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     loadAuthState();
   }, []);
-
-  /**
-   * Clear authentication data from localStorage
-   */
-  const clearAuthStorage = () => {
-    localStorage.removeItem(TOKEN_STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(TOKEN_STORAGE_KEYS.REFRESH_TOKEN);
-    localStorage.removeItem(TOKEN_STORAGE_KEYS.USER_INFO);
-  };
 
   /**
    * Save authentication data to localStorage
@@ -141,10 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTokens(response.access_token, response.refresh_token, response.user);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { message?: string };
       setAuthState(prev => ({ ...prev, isLoading: false }));
       
-      const errorMessage = error.message || 'Login failed';
+      const errorMessage = apiError.message || 'Login failed';
       return { success: false, error: errorMessage };
     }
   };

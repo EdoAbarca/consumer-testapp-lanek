@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { PasswordStrengthIndicator } from '@/components/ui/PasswordStrengthIndicator';
-import { authApi, type ApiErrorResponse } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import {
   registrationSchema,
   type RegistrationFormData,
@@ -34,7 +34,7 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     setError,
     reset,
   } = useForm<RegistrationFormData>({
@@ -49,7 +49,7 @@ export default function RegisterPage() {
       setSubmissionState(SubmissionState.SUBMITTING);
       setApiError('');
 
-      const response = await authApi.register(data);
+      await authApi.register(data);
       
       setSubmissionState(SubmissionState.SUCCESS);
       
@@ -58,12 +58,13 @@ export default function RegisterPage() {
         router.push('/login?registered=true');
       }, 2000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { status?: number; error?: string; message?: string; details?: Record<string, string[]> };
       setSubmissionState(SubmissionState.ERROR);
       
-      if (error.status === 400 && error.error) {
+      if (apiError.status === 400 && apiError.error) {
         // Handle specific backend validation errors
-        switch (error.error) {
+        switch (apiError.error) {
           case 'username_exists':
             setError('username', { message: 'This username is already taken' });
             break;
@@ -71,9 +72,9 @@ export default function RegisterPage() {
             setError('email', { message: 'This email is already registered' });
             break;
           case 'validation_error':
-            if (error.details) {
+            if (apiError.details) {
               // Map backend field errors to form fields
-              Object.entries(error.details).forEach(([field, messages]) => {
+              Object.entries(apiError.details).forEach(([field, messages]) => {
                 if (Array.isArray(messages) && messages.length > 0) {
                   setError(field as keyof RegistrationFormData, {
                     message: messages[0],
@@ -83,10 +84,10 @@ export default function RegisterPage() {
             }
             break;
           default:
-            setApiError(error.message || 'Registration failed. Please try again.');
+            setApiError(apiError.message || 'Registration failed. Please try again.');
         }
       } else {
-        setApiError(error.message || 'Registration failed. Please check your connection and try again.');
+        setApiError(apiError.message || 'Registration failed. Please check your connection and try again.');
       }
     }
   };
