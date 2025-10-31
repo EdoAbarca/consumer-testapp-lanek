@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""
+Custom pip-compile wrapper for generating requirements with hashes from pyproject.toml
+
+This script provides the exact functionality of:
+pip-compile --allow-unsafe --generate-hashes pyproject.toml --output-file ./requirements.txt
+
+Since pip-tools has compatibility issues with newer pip versions in uv environments,
+this script uses uv's native functionality to achieve the same result.
+"""
+
+import sys
+import subprocess
+import os
+from pathlib import Path
+
+def main():
+    """Main function to generate requirements.txt with hashes from pyproject.toml"""
+    
+    # Check if we're in the backend directory
+    if not os.path.exists('pyproject.toml'):
+        print("Error: pyproject.toml not found. Please run this script from the backend directory.")
+        sys.exit(1)
+    
+    # Parse command line arguments
+    if len(sys.argv) < 6:
+        print("Usage: pip-compile --allow-unsafe --generate-hashes pyproject.toml --output-file ./requirements.txt")
+        print("Note: This is a wrapper script that uses uv pip compile for compatibility")
+        sys.exit(1)
+    
+    # Extract output file from arguments
+    try:
+        output_file_index = sys.argv.index('--output-file')
+        output_file = sys.argv[output_file_index + 1]
+    except (ValueError, IndexError):
+        output_file = "./requirements.txt"
+    
+    # Check for upgrade flag
+    upgrade = '--upgrade' in sys.argv
+    
+    # Build uv command
+    cmd = ['uv', 'pip', 'compile', '--generate-hashes']
+    if upgrade:
+        cmd.append('--upgrade')
+    cmd.extend(['pyproject.toml', '--output-file', output_file])
+    
+    print(f"Executing: {' '.join(cmd)}")
+    print("Note: Using uv pip compile for compatibility with the current environment")
+    
+    # Execute the command
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=False)
+        print(f"✅ Successfully generated {output_file} with SHA256 hashes!")
+        return result.returncode
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Error generating requirements: {e}")
+        return e.returncode
+    except FileNotFoundError:
+        print("❌ Error: uv not found. Please ensure uv is installed and in your PATH.")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
