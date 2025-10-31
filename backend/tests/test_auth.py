@@ -7,6 +7,7 @@ functionality including validation, error handling, and database operations.
 
 import json
 import pytest
+from datetime import timedelta
 from flask import Flask
 
 from app import create_app, db
@@ -23,6 +24,8 @@ def app():
         SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
         SECRET_KEY = "test-secret-key"
         JWT_SECRET_KEY = "test-jwt-secret-key"
+        JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+        JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=1)
         WTF_CSRF_ENABLED = False
         SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -89,6 +92,280 @@ class TestUserRegistration:
         assert data["is_active"] is True
         assert data["created_at"] is not None
         assert data["message"] == "User registered successfully"
+
+
+class TestLoginEndpoint:
+    """Test cases for the user login endpoint."""
+
+    def test_successful_login(self, client, app):
+        """Test successful user login."""
+        # First register a user
+        registration_data = {
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpass123",
+            "confirm_password": "testpass123"
+        }
+        
+        client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json",
+        )
+
+        # Now test login
+        login_data = {
+            "email": "test@example.com",
+            "password": "testpass123"
+        }
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        json_response = json.loads(response.data)
+
+        # Check response structure
+        assert "access_token" in json_response
+        assert "refresh_token" in json_response
+        assert "user" in json_response
+        assert "message" in json_response
+
+        # Check user data
+        assert json_response["user"]["username"] == "testuser"
+        assert json_response["user"]["email"] == "test@example.com"
+        assert json_response["user"]["is_active"] is True
+        assert json_response["message"] == "Login successful"
+
+        # Check tokens are strings and not empty
+        assert isinstance(json_response["access_token"], str)
+        assert len(json_response["access_token"]) > 0
+        assert isinstance(json_response["refresh_token"], str)
+        assert len(json_response["refresh_token"]) > 0
+
+    def test_login_invalid_email(self, client):
+        """Test login with non-existent email."""
+        login_data = {
+            "email": "nonexistent@example.com",
+            "password": "testpass123"
+        }
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "invalid_credentials"
+        assert json_response["message"] == "Invalid email or password"
+
+    def test_login_invalid_password(self, client, app):
+        """Test login with wrong password."""
+        # First register a user
+        registration_data = {
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpass123",
+            "confirm_password": "testpass123"
+        }
+        
+        client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json",
+        )
+
+        # Now test login with wrong password
+        login_data = {
+            "email": "test@example.com",
+            "password": "wrongpassword"
+        }
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "invalid_credentials"
+        assert json_response["message"] == "Invalid email or password"
+
+    def test_login_inactive_user(self, client, app):
+        """Test login with deactivated user account."""
+        # First register a user
+        registration_data = {
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpass123",
+            "confirm_password": "testpass123"
+        }
+        
+        client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json",
+        )
+
+        # Deactivate the user
+        with app.app_context():
+            user = User.find_by_email("test@example.com")
+            user.is_active = False
+            db.session.commit()
+
+        # Now test login
+        login_data = {
+            "email": "test@example.com",
+            "password": "testpass123"
+        }
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "inactive_account"
+        assert json_response["message"] == "User account is deactivated"
+
+    def test_login_missing_content_type(self, client):
+        """Test login without proper content-type header."""
+        login_data = {
+            "email": "test@example.com",
+            "password": "testpass123"
+        }
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            # Missing content_type="application/json"
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "invalid_content_type"
+        assert json_response["message"] == "Content-Type must be application/json"
+
+    def test_login_invalid_json(self, client):
+        """Test login with invalid JSON payload."""
+        response = client.post(
+            "/api/auth/login",
+            data="invalid json",
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "invalid_json"
+        assert json_response["message"] == "Invalid JSON payload"
+
+    def test_login_validation_errors(self, client):
+        """Test login with validation errors."""
+        # Test missing fields
+        login_data = {"email": "test@example.com"}  # Missing password
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "validation_error"
+        assert "details" in json_response
+
+        # Test invalid email format
+        login_data = {
+            "email": "invalid-email",
+            "password": "testpass123"
+        }
+
+        response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "validation_error"
+        assert "details" in json_response
+
+
+class TestProtectedRoutes:
+    """Test cases for JWT-protected routes."""
+
+    def test_access_protected_route_with_valid_token(self, client, app):
+        """Test accessing protected route with valid JWT token."""
+        # First register and login a user
+        registration_data = {
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "testpass123",
+            "confirm_password": "testpass123"
+        }
+        
+        client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json",
+        )
+
+        login_data = {
+            "email": "test@example.com",
+            "password": "testpass123"
+        }
+
+        login_response = client.post(
+            "/api/auth/login",
+            data=json.dumps(login_data),
+            content_type="application/json",
+        )
+
+        assert login_response.status_code == 200
+        login_json = json.loads(login_response.data)
+        access_token = login_json["access_token"]
+
+        # Now access protected route with token
+        response = client.get(
+            "/api/consumption/dashboard",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+
+        assert response.status_code == 200
+        json_response = json.loads(response.data)
+        assert json_response["message"] == "Welcome to the dashboard"
+        assert json_response["user"]["username"] == "testuser"
+        assert json_response["user"]["email"] == "test@example.com"
+
+    def test_access_protected_route_without_token(self, client):
+        """Test accessing protected route without token."""
+        response = client.get("/api/consumption/dashboard")
+
+        assert response.status_code == 401
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "missing_token"
+        assert json_response["message"] == "Authorization token is required"
+
+    def test_access_protected_route_with_invalid_token(self, client):
+        """Test accessing protected route with invalid token."""
+        response = client.get(
+            "/api/consumption/dashboard",
+            headers={"Authorization": "Bearer invalid_token_here"}
+        )
+
+        assert response.status_code == 401
+        json_response = json.loads(response.data)
+        assert json_response["error"] == "invalid_token"
 
         # Verify user was created in database
         user = User.query.filter_by(email="test@example.com").first()

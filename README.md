@@ -167,18 +167,6 @@ See `docs/erd-diagram.md` for detailed entity relationships.
 - **CORS Protection** - Configurable origin policies
 - **Environment Variables** - Secure configuration management
 
-## 📋 API Documentation
-
-### Authentication Endpoints
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/health` - Service health check
-
-### Consumption Endpoints
-- `GET /api/consumption/` - List user's consumption data
-- `POST /api/consumption/` - Add new consumption record
-- `GET /api/consumption/health` - Service health check
-
 Detailed API documentation will be available using Swagger once implemented.
 
 ## 📝 License

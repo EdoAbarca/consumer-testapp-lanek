@@ -39,6 +39,39 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     jwt.init_app(app)
     CORS(app)
+    
+    # Configure JWT error handlers
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        """Handle expired token."""
+        return {
+            'error': 'token_expired',
+            'message': 'Token has expired'
+        }, 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        """Handle invalid token."""
+        return {
+            'error': 'invalid_token',
+            'message': 'Invalid token format'
+        }, 401
+
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        """Handle missing token."""
+        return {
+            'error': 'missing_token',
+            'message': 'Authorization token is required'
+        }, 401
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        """Handle revoked token."""
+        return {
+            'error': 'token_revoked',
+            'message': 'Token has been revoked'
+        }, 401
 
     # Configure Swagger with Flasgger
     app.config['SWAGGER'] = {
