@@ -4,9 +4,11 @@ Consumption data routes for managing user consumption records.
 This module contains endpoints for consumption data management.
 """
 
+from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from pydantic import ValidationError
+from sqlalchemy import func, extract
 
 from app import db
 from app.models.user import User
@@ -19,6 +21,9 @@ from app.schemas import (
     ErrorResponse,
     ValidationErrorResponse,
     PaginationMetadata,
+    AnalyticsResponse,
+    ConsumptionAnalytics,
+    MonthlyConsumption,
 )
 
 consumption_bp = Blueprint("consumption", __name__)
@@ -386,3 +391,236 @@ def dashboard():
             "email": current_user.email
         }
     }), 200
+
+
+@consumption_bp.route("/analytics")
+@jwt_required()
+def get_analytics():
+    """
+    Get consumption analytics for the authenticated user.
+    ---
+    tags:
+      - Consumption
+    summary: Get consumption analytics
+    description: |
+      Retrieve analytics data including total consumption, monthly averages,
+      current vs last month comparison, and monthly data for charts.
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Analytics data retrieved successfully
+        schema:
+          type: object
+          properties:
+            analytics:
+              type: object
+              properties:
+                total_consumption:
+                  type: number
+                  description: Total consumption across all records
+                  example: 1250.75
+                average_monthly:
+                  type: number
+                  description: Average consumption per month
+                  example: 125.08
+                current_month_total:
+                  type: number
+                  description: Current month total consumption
+                  example: 95.5
+                last_month_total:
+                  type: number
+                  description: Last month total consumption
+                  example: 110.25
+                monthly_data:
+                  type: array
+                  description: Monthly consumption breakdown for charts
+                  items:
+                    type: object
+                    properties:
+                      month:
+                        type: string
+                        description: Month in YYYY-MM format
+                        example: "2023-10"
+                      total:
+                        type: number
+                        description: Total consumption for the month
+                        example: 95.5
+                      electricity:
+                        type: number
+                        description: Electricity consumption for the month
+                        example: 65.2
+                      water:
+                        type: number
+                        description: Water consumption for the month
+                        example: 20.1
+                      gas:
+                        type: number
+                        description: Gas consumption for the month
+                        example: 10.2
+                total_records:
+                  type: integer
+                  description: Total number of consumption records
+                  example: 25
+                consumption_by_type:
+                  type: object
+                  description: Total consumption breakdown by type
+                  properties:
+                    electricity:
+                      type: number
+                      example: 650.3
+                    water:
+                      type: number
+                      example: 400.2
+                    gas:
+                      type: number
+                      example: 200.25
+            message:
+              type: string
+              example: "Analytics data retrieved successfully"
+      401:
+        description: Unauthorized - invalid or missing token
+        schema:
+          $ref: '#/definitions/ErrorResponse'
+      404:
+        description: User not found
+        schema:
+          $ref: '#/definitions/ErrorResponse'
+      500:
+        description: Internal server error
+        schema:
+          $ref: '#/definitions/ErrorResponse'
+    """
+    try:
+        # Get current user from JWT
+        current_user_id = get_jwt_identity()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user:
+            return jsonify({
+                "error": "user_not_found",
+                "message": "User not found"
+            }), 404
+            
+        if not current_user.is_active:
+            return jsonify({
+                "error": "inactive_user",
+                "message": "User account is deactivated"
+            }), 401
+
+        # Get current date
+        now = datetime.now()
+        current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
+        last_month_end = current_month_start - timedelta(seconds=1)
+        
+        # Base query for user's consumption records
+        base_query = Consumption.query.filter_by(user_id=current_user.id)
+        
+        # Calculate total consumption
+        total_consumption = base_query.with_entities(
+            func.sum(Consumption.value)
+        ).scalar() or 0.0
+        
+        # Calculate total records
+        total_records = base_query.count()
+        
+        # Calculate consumption by type
+        type_totals = base_query.with_entities(
+            Consumption.type,
+            func.sum(Consumption.value)
+        ).group_by(Consumption.type).all()
+        
+        consumption_by_type = {
+            "electricity": 0.0,
+            "water": 0.0,
+            "gas": 0.0
+        }
+        
+        for consumption_type, total in type_totals:
+            consumption_by_type[consumption_type] = float(total or 0.0)
+        
+        # Calculate current month total
+        current_month_total = base_query.filter(
+            Consumption.date >= current_month_start
+        ).with_entities(
+            func.sum(Consumption.value)
+        ).scalar() or 0.0
+        
+        # Calculate last month total
+        last_month_total = base_query.filter(
+            Consumption.date >= last_month_start,
+            Consumption.date <= last_month_end
+        ).with_entities(
+            func.sum(Consumption.value)
+        ).scalar() or 0.0
+        
+        # Calculate monthly data for charts (last 12 months)
+        twelve_months_ago = (now - timedelta(days=365)).replace(day=1)
+        
+        monthly_query = base_query.filter(
+            Consumption.date >= twelve_months_ago
+        ).with_entities(
+            extract('year', Consumption.date).label('year'),
+            extract('month', Consumption.date).label('month'),
+            Consumption.type,
+            func.sum(Consumption.value).label('total')
+        ).group_by(
+            extract('year', Consumption.date),
+            extract('month', Consumption.date),
+            Consumption.type
+        ).all()
+        
+        # Organize monthly data
+        monthly_data_dict = {}
+        for year, month, consumption_type, total in monthly_query:
+            month_key = f"{int(year)}-{int(month):02d}"
+            if month_key not in monthly_data_dict:
+                monthly_data_dict[month_key] = {
+                    "month": month_key,
+                    "total": 0.0,
+                    "electricity": 0.0,
+                    "water": 0.0,
+                    "gas": 0.0
+                }
+            
+            monthly_data_dict[month_key][consumption_type] = float(total or 0.0)
+            monthly_data_dict[month_key]["total"] += float(total or 0.0)
+        
+        # Convert to list and sort by month
+        monthly_data = [
+            MonthlyConsumption(**data) 
+            for data in sorted(monthly_data_dict.values(), key=lambda x: x["month"])
+        ]
+        
+        # Calculate average monthly consumption
+        if monthly_data:
+            total_months = len(monthly_data)
+            average_monthly = total_consumption / total_months if total_months > 0 else 0.0
+        else:
+            average_monthly = 0.0
+        
+        # Create analytics response
+        analytics = ConsumptionAnalytics(
+            total_consumption=float(total_consumption),
+            average_monthly=float(average_monthly),
+            current_month_total=float(current_month_total),
+            last_month_total=float(last_month_total),
+            monthly_data=monthly_data,
+            total_records=total_records,
+            consumption_by_type=consumption_by_type
+        )
+        
+        response = AnalyticsResponse(
+            analytics=analytics,
+            message="Analytics data retrieved successfully"
+        )
+        
+        return jsonify(response.model_dump()), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "internal_error",
+            "message": "An unexpected error occurred",
+            "details": {"error": str(e)}
+        }), 500

@@ -230,3 +230,41 @@ class ConsumptionListResponse(BaseModel):
         default="Consumption records retrieved successfully",
         description="Success message"
     )
+
+
+class MonthlyConsumption(BaseModel):
+    """Schema for monthly consumption data."""
+
+    month: str = Field(..., description="Month in YYYY-MM format", examples=["2023-10"])
+    total: float = Field(..., description="Total consumption for the month")
+    electricity: float = Field(default=0.0, description="Electricity consumption for the month")
+    water: float = Field(default=0.0, description="Water consumption for the month")
+    gas: float = Field(default=0.0, description="Gas consumption for the month")
+
+
+class ConsumptionAnalytics(BaseModel):
+    """Schema for consumption analytics response."""
+
+    total_consumption: float = Field(..., description="Total consumption across all records")
+    average_monthly: float = Field(..., description="Average consumption per month")
+    current_month_total: float = Field(..., description="Current month total consumption")
+    last_month_total: float = Field(..., description="Last month total consumption")
+    monthly_data: list[MonthlyConsumption] = Field(
+        ..., 
+        description="Monthly consumption breakdown for charts"
+    )
+    total_records: int = Field(..., description="Total number of consumption records")
+    consumption_by_type: dict[str, float] = Field(
+        ..., 
+        description="Total consumption breakdown by type"
+    )
+
+
+class AnalyticsResponse(BaseModel):
+    """Schema for analytics endpoint response."""
+
+    analytics: ConsumptionAnalytics = Field(..., description="Consumption analytics data")
+    message: str = Field(
+        default="Analytics data retrieved successfully",
+        description="Success message"
+    )

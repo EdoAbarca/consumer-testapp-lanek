@@ -212,6 +212,105 @@ def create_app(config_class=Config):
                     },
                 },
             },
+            'MonthlyConsumption': {
+                'type': 'object',
+                'properties': {
+                    'month': {
+                        'type': 'string',
+                        'description': 'Month in YYYY-MM format',
+                        'example': '2023-10',
+                    },
+                    'total': {
+                        'type': 'number',
+                        'description': 'Total consumption for the month',
+                        'example': 281.5,
+                    },
+                    'electricity': {
+                        'type': 'number',
+                        'description': 'Electricity consumption for the month',
+                        'example': 150.75,
+                    },
+                    'water': {
+                        'type': 'number',
+                        'description': 'Water consumption for the month',
+                        'example': 85.5,
+                    },
+                    'gas': {
+                        'type': 'number',
+                        'description': 'Gas consumption for the month',
+                        'example': 45.25,
+                    },
+                },
+            },
+            'ConsumptionAnalytics': {
+                'type': 'object',
+                'properties': {
+                    'total_consumption': {
+                        'type': 'number',
+                        'description': 'Total consumption across all records',
+                        'example': 1250.75,
+                    },
+                    'average_monthly': {
+                        'type': 'number',
+                        'description': 'Average consumption per month',
+                        'example': 125.08,
+                    },
+                    'current_month_total': {
+                        'type': 'number',
+                        'description': 'Current month total consumption',
+                        'example': 95.5,
+                    },
+                    'last_month_total': {
+                        'type': 'number',
+                        'description': 'Last month total consumption',
+                        'example': 110.25,
+                    },
+                    'monthly_data': {
+                        'type': 'array',
+                        'items': {
+                            '$ref': '#/definitions/MonthlyConsumption',
+                        },
+                        'description': 'Monthly consumption breakdown for charts',
+                    },
+                    'total_records': {
+                        'type': 'integer',
+                        'description': 'Total number of consumption records',
+                        'example': 25,
+                    },
+                    'consumption_by_type': {
+                        'type': 'object',
+                        'description': 'Total consumption breakdown by type',
+                        'properties': {
+                            'electricity': {
+                                'type': 'number',
+                                'example': 650.3,
+                            },
+                            'water': {
+                                'type': 'number',
+                                'example': 400.2,
+                            },
+                            'gas': {
+                                'type': 'number',
+                                'example': 200.25,
+                            },
+                        },
+                    },
+                },
+            },
+            'AnalyticsResponse': {
+                'type': 'object',
+                'properties': {
+                    'analytics': {
+                        '$ref': '#/definitions/ConsumptionAnalytics',
+                        'description': 'Consumption analytics data',
+                    },
+                    'message': {
+                        'type': 'string',
+                        'description': 'Success message',
+                        'example': 'Analytics data retrieved successfully',
+                    },
+                },
+            },
         },
     }
     
