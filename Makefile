@@ -3,20 +3,33 @@
 # This Makefile provides convenient commands for development, testing, and deployment
 # of the Consumer Data Management System.
 
-.PHONY: help setup install-backend install-frontend install dev dev-backend dev-frontend build test test-backend test-frontend lint clean
+.PHONY: help setup install-backend install-frontend install dev dev-backend dev-frontend build test test-backend test-frontend lint clean start stop logs
 
 # Default target
 help: ## Show this help message
 	@echo "Consumer TestApp Lanek - Available Commands:"
 	@echo ""
+	@echo "\033[1;34mCore Development Lifecycle (US-5.3):\033[0m"
+	@echo "  \033[36msetup\033[0m                Set up the entire development environment"
+	@echo "  \033[36mbuild\033[0m                Build all containers (Docker images)"
+	@echo "  \033[36mstart\033[0m                Start all services"
+	@echo "  \033[36mstop\033[0m                 Stop all services"
+	@echo "  \033[36mlogs\033[0m                 View logs from all services"
+	@echo "  \033[36mclean\033[0m                Clean containers, volumes, and build artifacts"
+	@echo ""
+	@echo "\033[1;34mAll Available Commands:\033[0m"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Setup and Installation
 setup: ## Set up the entire development environment
 	@echo "🚀 Setting up Consumer TestApp Lanek development environment..."
+	@echo "📋 Creating environment file..."
+	@if [ ! -f .env ]; then cp .env.example .env && echo "✅ .env file created from template. Please edit with your credentials."; else echo "⚠️  .env file already exists"; fi
 	@make install-backend
 	@make install-frontend
-	@echo "✅ Setup complete! Use 'make dev' to start development servers."
+	@echo "🐳 Building Docker images..."
+	@make docker-build
+	@echo "✅ Setup complete! Use 'make start' to start services or 'make dev' for development servers."
 
 install: setup ## Alias for setup
 
@@ -31,6 +44,28 @@ install-frontend: ## Install frontend dependencies using npm
 	@echo "📦 Installing frontend dependencies..."
 	@cd frontend && npm install
 	@echo "✅ Frontend dependencies installed!"
+
+# Project Lifecycle Commands (Required by US-5.3)
+start: docker-up ## Start all services (alias for docker-up)
+
+stop: docker-down ## Stop all services (alias for docker-down)
+
+logs: docker-logs ## View logs from all services (alias for docker-logs)
+
+clean: ## Clean containers, volumes, and build artifacts
+	@echo "🧹 Cleaning up Docker resources and build artifacts..."
+	@make docker-clean
+	@echo "🧹 Cleaning local build artifacts..."
+	@rm -rf backend/.pytest_cache
+	@rm -rf backend/__pycache__
+	@rm -rf backend/app/__pycache__
+	@rm -rf backend/dist
+	@rm -rf backend/build
+	@rm -rf backend/*.egg-info
+	@rm -rf frontend/.next
+	@rm -rf frontend/dist
+	@rm -rf frontend/build
+	@echo "✅ Cleanup completed!"
 
 # Development
 dev: ## Start both backend and frontend development servers
@@ -79,10 +114,12 @@ pre-commit-install: ## Install pre-commit hooks
 	@echo "✅ Pre-commit hooks installed!"
 
 # Building
-build: ## Build both backend and frontend for production
-	@echo "🏗️  Building applications for production..."
+build: ## Build all containers (includes Docker images and local builds)
+	@echo "🏗️  Building all containers and applications..."
+	@make docker-build
 	@make build-backend
 	@make build-frontend
+	@echo "✅ All builds completed!"
 
 build-backend: ## Build backend (prepare for deployment)
 	@echo "🐍 Building backend..."
@@ -223,21 +260,6 @@ env-copy: ## Copy environment template
 	@cp backend/.env.example backend/.env
 	@cp frontend/.env.example frontend/.env
 	@echo "✅ Environment files created! Please edit .env files with your configuration."
-
-# Cleanup
-clean: ## Clean build artifacts and cache files
-	@echo "🧹 Cleaning up..."
-	@rm -rf backend/.pytest_cache
-	@rm -rf backend/__pycache__
-	@rm -rf backend/app/__pycache__
-	@rm -rf backend/dist
-	@rm -rf backend/build
-	@rm -rf backend/*.egg-info
-	@rm -rf backend/.uv
-	@rm -rf frontend/.next
-	@rm -rf frontend/node_modules/.cache
-	@rm -rf frontend/coverage
-	@echo "✅ Cleanup complete!"
 
 clean-deps: ## Remove all dependencies (nuclear option)
 	@echo "💣 Removing all dependencies..."
