@@ -5,11 +5,23 @@ This module serves as the entry point for the Flask application.
 """
 
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from app import create_app
+from app.config import DevelopmentConfig, ProductionConfig
+
+# Determine configuration based on environment
+config_class = (
+    DevelopmentConfig 
+    if os.environ.get("FLASK_ENV") == "development" 
+    else ProductionConfig
+)
 
 # Create Flask application instance
-app = create_app()
+app = create_app(config_class)
 
 if __name__ == "__main__":
     # Run the application in development mode
