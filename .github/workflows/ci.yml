@@ -48,6 +48,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-python-
     
+    - name: Create backend .env file
+      run: |
+        cd backend
+        cat > .env << 'EOF'
+        FLASK_ENV=testing
+        SECRET_KEY=${{ secrets.SECRET_KEY || 'test-secret-key-for-ci' }}
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'test-jwt-secret-key-for-ci' }}
+        DATABASE_URL=postgresql://postgres:password@localhost:5432/test_db
+        CORS_ORIGINS=http://localhost:3000
+        DEBUG=false
+        EOF
+    
     - name: Install backend dependencies
       run: make install-backend
     
@@ -72,7 +84,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
     
@@ -86,6 +98,16 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-
           ${{ runner.os }}-nextjs-
+    
+    - name: Create frontend .env.local file
+      run: |
+        cd frontend
+        cat > .env.local << 'EOF'
+        NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api' }}
+        NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+        NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'test-nextauth-secret-for-ci-min-32-characters-long' }}
+        NODE_ENV=test
+        EOF
     
     - name: Install frontend dependencies
       run: make install-frontend

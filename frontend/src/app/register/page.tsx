@@ -42,6 +42,7 @@ export default function RegisterPage() {
     mode: 'onBlur',
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedPassword = watch('password', '');
 
   const onSubmit = async (data: RegistrationFormData) => {
