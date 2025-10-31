@@ -1,0 +1,23 @@
+erDiagram
+    %% MVP Users Table (Minimal)
+    User {
+        uuid id PK "Primary Key"
+        varchar email UK "Unique email - login identifier"
+        varchar password "bcrypt hashed password"
+        varchar name "Display name"
+        timestamp created_at "Account creation"
+    }
+
+    %% MVP Consumption Records (Core Entity)
+    ConsumptionRecord {
+        uuid id PK "Primary Key"
+        uuid user_id FK "Foreign Key to User"
+        date consumption_date "Date of consumption"
+        decimal consumption_value "Consumption amount"
+        varchar consumption_type "Type: electricity, water, gas"
+        text notes "Optional user notes"
+        timestamp created_at "Record creation timestamp"
+    }
+
+    %% MVP Relationship (Simple One-to-Many)
+    User ||--o{ ConsumptionRecord : "creates"
