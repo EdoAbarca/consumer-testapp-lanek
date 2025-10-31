@@ -843,3 +843,298 @@ class TestConsumptionList:
             assert response.status_code == 401
             data = response.json
             assert data["error"] == "inactive_user"
+
+
+class TestConsumptionAnalytics:
+    """Test consumption analytics endpoint functionality."""
+    
+    @pytest.fixture
+    def sample_consumption_data(self, app, test_user):
+        """Create sample consumption data for analytics testing."""
+        with app.app_context():
+            user = User.query.get(test_user.id)
+            
+            # Create consumption records for different months and types
+            consumption_records = [
+                # October 2023
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 10, 15, 10, 0, 0, tzinfo=timezone.utc),
+                    value=150.75,
+                    type="electricity",
+                    notes="October electricity"
+                ),
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 10, 20, 10, 0, 0, tzinfo=timezone.utc),
+                    value=85.50,
+                    type="water",
+                    notes="October water"
+                ),
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 10, 25, 10, 0, 0, tzinfo=timezone.utc),
+                    value=45.25,
+                    type="gas",
+                    notes="October gas"
+                ),
+                # September 2023
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 9, 15, 10, 0, 0, tzinfo=timezone.utc),
+                    value=140.00,
+                    type="electricity",
+                    notes="September electricity"
+                ),
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 9, 20, 10, 0, 0, tzinfo=timezone.utc),
+                    value=80.00,
+                    type="water",
+                    notes="September water"
+                ),
+                # August 2023
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 8, 15, 10, 0, 0, tzinfo=timezone.utc),
+                    value=120.00,
+                    type="electricity",
+                    notes="August electricity"
+                ),
+            ]
+            
+            for record in consumption_records:
+                db.session.add(record)
+            db.session.commit()
+            
+            return consumption_records
+
+    def test_analytics_success_with_data(self, client, auth_headers, sample_consumption_data):
+        """Test successful analytics retrieval with consumption data."""
+        response = client.get(
+            "/api/consumption/analytics",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert data["message"] == "Analytics data retrieved successfully"
+        assert "analytics" in data
+        
+        analytics = data["analytics"]
+        
+        # Check required fields
+        assert "total_consumption" in analytics
+        assert "average_monthly" in analytics
+        assert "current_month_total" in analytics
+        assert "last_month_total" in analytics
+        assert "monthly_data" in analytics
+        assert "total_records" in analytics
+        assert "consumption_by_type" in analytics
+        
+        # Verify calculations
+        assert analytics["total_consumption"] == 621.5  # Sum of all values
+        assert analytics["total_records"] == 6
+        
+        # Check consumption by type
+        consumption_by_type = analytics["consumption_by_type"]
+        assert consumption_by_type["electricity"] == 410.75  # 150.75 + 140.00 + 120.00
+        assert consumption_by_type["water"] == 165.50  # 85.50 + 80.00
+        assert consumption_by_type["gas"] == 45.25
+        
+        # Check monthly data structure
+        monthly_data = analytics["monthly_data"]
+        assert isinstance(monthly_data, list)
+        
+        # Should have data for months with records
+        october_data = next((item for item in monthly_data if item["month"] == "2023-10"), None)
+        assert october_data is not None
+        assert october_data["total"] == 281.5  # 150.75 + 85.50 + 45.25
+        assert october_data["electricity"] == 150.75
+        assert october_data["water"] == 85.50
+        assert october_data["gas"] == 45.25
+
+    def test_analytics_success_no_data(self, client, auth_headers):
+        """Test analytics retrieval with no consumption data."""
+        response = client.get(
+            "/api/consumption/analytics",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert data["message"] == "Analytics data retrieved successfully"
+        
+        analytics = data["analytics"]
+        assert analytics["total_consumption"] == 0.0
+        assert analytics["average_monthly"] == 0.0
+        assert analytics["current_month_total"] == 0.0
+        assert analytics["last_month_total"] == 0.0
+        assert analytics["total_records"] == 0
+        assert analytics["monthly_data"] == []
+        
+        # Check empty consumption by type
+        consumption_by_type = analytics["consumption_by_type"]
+        assert consumption_by_type["electricity"] == 0.0
+        assert consumption_by_type["water"] == 0.0
+        assert consumption_by_type["gas"] == 0.0
+
+    def test_analytics_unauthorized(self, client):
+        """Test analytics access without authentication."""
+        response = client.get("/api/consumption/analytics")
+        assert response.status_code == 401
+
+    def test_analytics_invalid_token(self, client):
+        """Test analytics access with invalid token."""
+        headers = {"Authorization": "Bearer invalid_token"}
+        response = client.get(
+            "/api/consumption/analytics",
+            headers=headers
+        )
+        assert response.status_code == 401
+
+    def test_analytics_user_isolation(self, client, app):
+        """Test that analytics only shows data for the authenticated user."""
+        with app.app_context():
+            # Create two users
+            user1 = User(username="user1", email="user1@example.com", password="password123")
+            user1.set_password("password123")
+            user2 = User(username="user2", email="user2@example.com", password="password123")
+            user2.set_password("password123")
+            
+            db.session.add(user1)
+            db.session.add(user2)
+            db.session.commit()
+            
+            # Add consumption data for both users
+            consumption1 = Consumption(
+                user_id=user1.id,
+                date=datetime.now(timezone.utc),
+                value=100.0,
+                type="electricity"
+            )
+            consumption2 = Consumption(
+                user_id=user2.id,
+                date=datetime.now(timezone.utc),
+                value=200.0,
+                type="electricity"
+            )
+            
+            db.session.add(consumption1)
+            db.session.add(consumption2)
+            db.session.commit()
+            
+            # Login as user1
+            login_response = client.post(
+                "/api/auth/login",
+                data=json.dumps({
+                    "email": "user1@example.com",
+                    "password": "password123"
+                }),
+                content_type="application/json",
+            )
+            assert login_response.status_code == 200
+            
+            token = login_response.json["access_token"]
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Get analytics for user1
+            response = client.get(
+                "/api/consumption/analytics",
+                headers=headers
+            )
+            assert response.status_code == 200
+            
+            analytics = response.json["analytics"]
+            # Should only see user1's data (100.0), not user2's data (200.0)
+            assert analytics["total_consumption"] == 100.0
+            assert analytics["total_records"] == 1
+
+    def test_analytics_with_inactive_user(self, client, app):
+        """Test analytics access with deactivated user."""
+        with app.app_context():
+            # Create and deactivate user
+            user = User(username="inactive", email="inactive@example.com", password="password123")
+            user.set_password("password123")
+            user.is_active = False
+            db.session.add(user)
+            db.session.commit()
+
+            # Login (this should work even with inactive user for some systems)
+            login_response = client.post(
+                "/api/auth/login",
+                data=json.dumps({
+                    "email": "inactive@example.com",
+                    "password": "password123"
+                }),
+                content_type="application/json",
+            )
+            
+            # Skip this test if login fails for inactive users
+            if login_response.status_code != 200:
+                return
+                
+            token = login_response.json["access_token"]
+            headers = {"Authorization": f"Bearer {token}"}
+
+            # Try to get analytics
+            response = client.get(
+                "/api/consumption/analytics",
+                headers=headers
+            )
+            assert response.status_code == 401
+            data = response.json
+            assert data["error"] == "inactive_user"
+
+    def test_analytics_monthly_data_ordering(self, client, auth_headers, app, test_user):
+        """Test that monthly data is properly ordered by month."""
+        with app.app_context():
+            user = User.query.get(test_user.id)
+            
+            # Create consumption records in different months (not in chronological order)
+            consumption_records = [
+                # March 2023
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 3, 15, 10, 0, 0, tzinfo=timezone.utc),
+                    value=100.0,
+                    type="electricity"
+                ),
+                # January 2023  
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 1, 15, 10, 0, 0, tzinfo=timezone.utc),
+                    value=200.0,
+                    type="electricity"
+                ),
+                # February 2023
+                Consumption(
+                    user_id=user.id,
+                    date=datetime(2023, 2, 15, 10, 0, 0, tzinfo=timezone.utc),
+                    value=150.0,
+                    type="electricity"
+                ),
+            ]
+            
+            for record in consumption_records:
+                db.session.add(record)
+            db.session.commit()
+            
+        response = client.get(
+            "/api/consumption/analytics",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        analytics = response.json["analytics"]
+        monthly_data = analytics["monthly_data"]
+        
+        # Check that months are in chronological order
+        expected_months = ["2023-01", "2023-02", "2023-03"]
+        actual_months = [item["month"] for item in monthly_data]
+        assert actual_months == expected_months
+        
+        # Check values
+        assert monthly_data[0]["total"] == 200.0  # January
+        assert monthly_data[1]["total"] == 150.0  # February  
+        assert monthly_data[2]["total"] == 100.0  # March

@@ -130,3 +130,39 @@ export function getConsumptionTypeOptions(): Array<{ value: ConsumptionType; lab
     { value: 'gas', label: 'Gas' },
   ];
 }
+
+/**
+ * Monthly Consumption Data Interface
+ */
+export interface MonthlyConsumption {
+  month: string; // YYYY-MM format
+  total: number;
+  electricity: number;
+  water: number;
+  gas: number;
+}
+
+/**
+ * Consumption Analytics Data Interface
+ */
+export interface ConsumptionAnalytics {
+  total_consumption: number;
+  average_monthly: number;
+  current_month_total: number;
+  last_month_total: number;
+  monthly_data: MonthlyConsumption[];
+  total_records: number;
+  consumption_by_type: {
+    electricity: number;
+    water: number;
+    gas: number;
+  };
+}
+
+/**
+ * Analytics Response Interface
+ */
+export interface AnalyticsResponse {
+  analytics: ConsumptionAnalytics;
+  message: string;
+}
