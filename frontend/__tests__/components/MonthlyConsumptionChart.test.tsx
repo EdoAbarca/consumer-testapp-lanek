@@ -175,6 +175,7 @@ describe('MonthlyConsumptionChart Component', () => {
     // Issue: Chart component expects array data but crashes on null/undefined input
     // The component needs defensive programming to handle edge cases
     it.skip('handles undefined data gracefully', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render(<MonthlyConsumptionChart data={undefined as any} />);
       expect(screen.getByText('No consumption data available')).toBeInTheDocument();
     });
@@ -182,6 +183,7 @@ describe('MonthlyConsumptionChart Component', () => {
     // SKIPPED: Component null data handling needs improvement  
     // Issue: Chart tries to call .map() on null data causing runtime error
     it.skip('handles null data gracefully', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render(<MonthlyConsumptionChart data={null as any} />);
       expect(screen.getByText('No consumption data available')).toBeInTheDocument();
     });

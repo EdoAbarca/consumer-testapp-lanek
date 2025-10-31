@@ -27,6 +27,7 @@ jest.mock('../src/lib/api', () => ({
 }));
 
 jest.mock('../src/components/analytics/AnalyticsCards', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function MockAnalyticsCards({ analytics }: { analytics: any }) {
     if (!analytics) {
       return <div data-testid="analytics-cards">No analytics data</div>;
