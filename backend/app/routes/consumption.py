@@ -63,8 +63,9 @@ def dashboard():
               type: string
               example: "Authorization token is required"
     """
-    # Get current user from JWT
-    current_user_id = get_jwt_identity()
+    # Get current user from JWT (convert string identity to int)
+    current_user_id_str = get_jwt_identity()
+    current_user_id = int(current_user_id_str)
     current_user = User.query.get(current_user_id)
     
     if not current_user:

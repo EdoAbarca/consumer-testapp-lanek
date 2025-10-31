@@ -31,15 +31,15 @@ def create_tokens(user: User) -> Dict[str, str]:
     Returns:
         Dictionary containing access_token and refresh_token
     """
-    # Create access token with user ID as identity
+    # Create access token with user ID as identity (convert to string)
     access_token = create_access_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=current_app.config['JWT_ACCESS_TOKEN_EXPIRES']
     )
     
     # Create refresh token
     refresh_token = create_refresh_token(
-        identity=user.id,
+        identity=str(user.id),
         expires_delta=current_app.config['JWT_REFRESH_TOKEN_EXPIRES']
     )
     
@@ -60,15 +60,20 @@ def get_current_user() -> Optional[User]:
         # Verify JWT is present and valid
         verify_jwt_in_request()
         
-        # Get user ID from token
-        user_id = get_jwt_identity()
+        # Get user ID from token (convert from string to int)
+        user_id_str = get_jwt_identity()
         
-        if not user_id:
+        if not user_id_str:
             return None
             
+        user_id = int(user_id_str)
+        
         # Find and return user
         return User.query.get(user_id)
         
+    except (ValueError, TypeError):
+        # Handle conversion errors
+        return None
     except Exception:
         return None
 
