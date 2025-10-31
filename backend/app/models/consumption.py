@@ -18,7 +18,7 @@ from app import db
 
 class ConsumptionType(Enum):
     """Enum for consumption types."""
-    
+
     ELECTRICITY = "electricity"
     WATER = "water"
     GAS = "gas"
@@ -40,18 +40,19 @@ class Consumption(db.Model):
     # Required fields
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     value: Mapped[float] = mapped_column(
-        Numeric(10, 2), nullable=False,
-        comment="Consumption value with 2 decimal places"
+        Numeric(10, 2),
+        nullable=False,
+        comment="Consumption value with 2 decimal places",
     )
     type: Mapped[str] = mapped_column(
-        String(20), nullable=False,
-        comment="Type of consumption: electricity, water, or gas"
+        String(20),
+        nullable=False,
+        comment="Type of consumption: electricity, water, or gas",
     )
 
     # Optional fields
     notes: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True,
-        comment="Optional notes about the consumption record"
+        Text, nullable=True, comment="Optional notes about the consumption record"
     )
 
     # Timestamps
@@ -69,13 +70,13 @@ class Consumption(db.Model):
     user: Mapped["User"] = relationship("User", back_populates="consumptions")
 
     def __init__(
-        self, 
-        user_id: int, 
-        date: datetime, 
-        value: float, 
-        type: str, 
+        self,
+        user_id: int,
+        date: datetime,
+        value: float,
+        type: str,
         notes: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a new Consumption instance.
@@ -125,4 +126,6 @@ class Consumption(db.Model):
 
     def __repr__(self) -> str:
         """String representation of Consumption object."""
-        return f"<Consumption {self.id}: {self.type} - {self.value} on {self.date.date()}>"
+        return (
+            f"<Consumption {self.id}: {self.type} - {self.value} on {self.date.date()}>"
+        )

@@ -67,8 +67,8 @@ class UserRegistrationRequest(BaseModel):
 
         return v
 
-    @model_validator(mode='after')
-    def validate_passwords_match(self) -> 'UserRegistrationRequest':
+    @model_validator(mode="after")
+    def validate_passwords_match(self) -> "UserRegistrationRequest":
         """Validate that password and confirm_password match."""
         if self.password != self.confirm_password:
             raise ValueError("Password and confirm password do not match")
@@ -106,9 +106,7 @@ class UserLoginResponse(BaseModel):
     access_token: str = Field(..., description="JWT access token")
     refresh_token: str = Field(..., description="JWT refresh token")
     user: UserRegistrationResponse = Field(..., description="User information")
-    message: str = Field(
-        default="Login successful", description="Success message"
-    )
+    message: str = Field(default="Login successful", description="Success message")
 
 
 class ErrorResponse(BaseModel):
@@ -141,30 +139,29 @@ class SuccessResponse(BaseModel):
 
 # Consumption Schemas
 
+
 class ConsumptionCreateRequest(BaseModel):
     """Schema for creating a new consumption record."""
 
     date: datetime = Field(
-        ..., 
+        ...,
         description="Date of the consumption (ISO format)",
-        examples=["2023-10-31T10:00:00Z"]
+        examples=["2023-10-31T10:00:00Z"],
     )
     value: float = Field(
-        ..., 
-        gt=0, 
+        ...,
+        gt=0,
         description="Consumption value (must be positive)",
-        examples=[150.75, 85.2, 25.0]
+        examples=[150.75, 85.2, 25.0],
     )
     type: str = Field(
-        ..., 
-        description="Type of consumption",
-        examples=["electricity", "water", "gas"]
+        ..., description="Type of consumption", examples=["electricity", "water", "gas"]
     )
     notes: Optional[str] = Field(
-        default=None, 
+        default=None,
         max_length=500,
         description="Optional notes about the consumption",
-        examples=["High usage due to air conditioning", "Normal monthly reading"]
+        examples=["High usage due to air conditioning", "Normal monthly reading"],
     )
 
     @field_validator("type")
@@ -203,10 +200,11 @@ class ConsumptionResponse(BaseModel):
 class ConsumptionCreateResponse(BaseModel):
     """Schema for consumption creation response."""
 
-    consumption: ConsumptionResponse = Field(..., description="Created consumption record")
+    consumption: ConsumptionResponse = Field(
+        ..., description="Created consumption record"
+    )
     message: str = Field(
-        default="Consumption record created successfully",
-        description="Success message"
+        default="Consumption record created successfully", description="Success message"
     )
 
 
@@ -224,11 +222,13 @@ class PaginationMetadata(BaseModel):
 class ConsumptionListResponse(BaseModel):
     """Schema for consumption list response."""
 
-    consumptions: list[ConsumptionResponse] = Field(..., description="List of consumption records")
+    consumptions: list[ConsumptionResponse] = Field(
+        ..., description="List of consumption records"
+    )
     pagination: PaginationMetadata = Field(..., description="Pagination information")
     message: str = Field(
         default="Consumption records retrieved successfully",
-        description="Success message"
+        description="Success message",
     )
 
 
@@ -237,7 +237,9 @@ class MonthlyConsumption(BaseModel):
 
     month: str = Field(..., description="Month in YYYY-MM format", examples=["2023-10"])
     total: float = Field(..., description="Total consumption for the month")
-    electricity: float = Field(default=0.0, description="Electricity consumption for the month")
+    electricity: float = Field(
+        default=0.0, description="Electricity consumption for the month"
+    )
     water: float = Field(default=0.0, description="Water consumption for the month")
     gas: float = Field(default=0.0, description="Gas consumption for the month")
 
@@ -245,26 +247,29 @@ class MonthlyConsumption(BaseModel):
 class ConsumptionAnalytics(BaseModel):
     """Schema for consumption analytics response."""
 
-    total_consumption: float = Field(..., description="Total consumption across all records")
+    total_consumption: float = Field(
+        ..., description="Total consumption across all records"
+    )
     average_monthly: float = Field(..., description="Average consumption per month")
-    current_month_total: float = Field(..., description="Current month total consumption")
+    current_month_total: float = Field(
+        ..., description="Current month total consumption"
+    )
     last_month_total: float = Field(..., description="Last month total consumption")
     monthly_data: list[MonthlyConsumption] = Field(
-        ..., 
-        description="Monthly consumption breakdown for charts"
+        ..., description="Monthly consumption breakdown for charts"
     )
     total_records: int = Field(..., description="Total number of consumption records")
     consumption_by_type: dict[str, float] = Field(
-        ..., 
-        description="Total consumption breakdown by type"
+        ..., description="Total consumption breakdown by type"
     )
 
 
 class AnalyticsResponse(BaseModel):
     """Schema for analytics endpoint response."""
 
-    analytics: ConsumptionAnalytics = Field(..., description="Consumption analytics data")
+    analytics: ConsumptionAnalytics = Field(
+        ..., description="Consumption analytics data"
+    )
     message: str = Field(
-        default="Analytics data retrieved successfully",
-        description="Success message"
+        default="Analytics data retrieved successfully", description="Success message"
     )
