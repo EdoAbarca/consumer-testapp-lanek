@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
 import ConsumptionListPage from '../../src/app/consumption/list/page';
@@ -34,7 +34,7 @@ const mockConsumptionApiList = consumptionApi.list as jest.MockedFunction<typeof
 describe('ConsumptionListPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseRouter.mockReturnValue({ push: mockPush } as any);
+    mockUseRouter.mockReturnValue({ push: mockPush } as unknown as ReturnType<typeof useRouter>);
   });
 
   describe('Authentication', () => {
