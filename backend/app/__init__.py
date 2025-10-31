@@ -44,4 +44,15 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(consumption_bp, url_prefix='/api/consumption')
     
+    # Add health check endpoint
+    @app.route('/health')
+    @app.route('/api/health')
+    def health_check():
+        """Health check endpoint for monitoring."""
+        return {
+            'status': 'healthy',
+            'service': 'consumer-testapp-backend',
+            'version': '1.0.0'
+        }
+    
     return app
