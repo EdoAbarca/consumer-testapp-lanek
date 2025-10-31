@@ -30,7 +30,15 @@ def auth_health():
     Health check endpoint for authentication routes.
     ---
     tags:
-      - Authentication
+      - Health
+    summary: Authentication service health check
+    description: |
+      Check if the authentication service is operational.
+      
+      **curl example:**
+      ```bash
+      curl -X GET "http://localhost:5000/api/auth/health"
+      ```
     responses:
       200:
         description: Authentication service is healthy
@@ -65,6 +73,18 @@ def register():
       - Email: Must be a valid email format
       - Password: Minimum 8 characters, must contain at least one letter and one number
       - Confirm Password: Must match the password field
+      
+      **curl example:**
+      ```bash
+      curl -X POST "http://localhost:5000/api/auth/register" \
+           -H "Content-Type: application/json" \
+           -d '{
+             "username": "johndoe",
+             "email": "john@example.com",
+             "password": "SecurePass123!",
+             "confirm_password": "SecurePass123!"
+           }'
+      ```
     parameters:
       - in: body
         name: body
@@ -284,6 +304,16 @@ def login():
       - Checks if user exists and credentials are correct
       - Verifies user account is active
       - Returns JWT tokens for authenticated sessions
+      
+      **curl example:**
+      ```bash
+      curl -X POST "http://localhost:5000/api/auth/login" \
+           -H "Content-Type: application/json" \
+           -d '{
+             "email": "john@example.com",
+             "password": "SecurePass123!"
+           }'
+      ```
     parameters:
       - in: body
         name: body

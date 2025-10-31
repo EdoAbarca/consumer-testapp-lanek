@@ -31,7 +31,32 @@ consumption_bp = Blueprint("consumption", __name__)
 
 @consumption_bp.route("/health")
 def consumption_health():
-    """Health check endpoint for consumption routes."""
+    """
+    Health check endpoint for consumption routes.
+    ---
+    tags:
+      - Health
+    summary: Consumption service health check
+    description: |
+      Check if the consumption service is operational.
+      
+      **curl example:**
+      ```bash
+      curl -X GET "http://localhost:5000/api/consumption/health"
+      ```
+    responses:
+      200:
+        description: Service is healthy
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "ok"
+            service:
+              type: string
+              example: "consumption"
+    """
     return {"status": "ok", "service": "consumption"}
 
 
@@ -44,7 +69,21 @@ def create_consumption():
     tags:
       - Consumption
     summary: Create consumption record
-    description: Create a new consumption record with validation
+    description: |
+      Create a new consumption record with validation.
+      
+      **curl example:**
+      ```bash
+      curl -X POST "http://localhost:5000/api/consumption" \
+           -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+           -H "Content-Type: application/json" \
+           -d '{
+             "date": "2023-10-31T10:00:00Z",
+             "value": 150.75,
+             "type": "electricity",
+             "notes": "High usage due to air conditioning"
+           }'
+      ```
     security:
       - Bearer: []
     parameters:
@@ -186,6 +225,19 @@ def list_consumptions():
     description: |
       Retrieve consumption records for the authenticated user with optional pagination.
       Records are ordered by date (newest first) and filtered to show only the current user's data.
+      
+      **curl examples:**
+      ```bash
+      # Get all consumption records (first page)
+      curl -X GET "http://localhost:5000/api/consumption" \
+           -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+           -H "Content-Type: application/json"
+      
+      # Get specific page with custom page size
+      curl -X GET "http://localhost:5000/api/consumption?page=2&per_page=10" \
+           -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+           -H "Content-Type: application/json"
+      ```
     security:
       - Bearer: []
     parameters:
@@ -330,7 +382,16 @@ def dashboard():
     tags:
       - Consumption
     summary: Get user dashboard
-    description: Protected endpoint that requires JWT authentication
+    description: |
+      Protected endpoint that requires JWT authentication. 
+      Returns basic user information for dashboard display.
+      
+      **curl example:**
+      ```bash
+      curl -X GET "http://localhost:5000/api/consumption/dashboard" \
+           -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+           -H "Content-Type: application/json"
+      ```
     security:
       - Bearer: []
     responses:
@@ -405,6 +466,16 @@ def get_analytics():
     description: |
       Retrieve analytics data including total consumption, monthly averages,
       current vs last month comparison, and monthly data for charts.
+      
+      **Note**: This endpoint provides analytics functionality that may have been 
+      referenced as "/stats" in requirements, but is implemented as "/analytics".
+      
+      **curl example:**
+      ```bash
+      curl -X GET "http://localhost:5000/api/consumption/analytics" \
+           -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+           -H "Content-Type: application/json"
+      ```
     security:
       - Bearer: []
     responses:
