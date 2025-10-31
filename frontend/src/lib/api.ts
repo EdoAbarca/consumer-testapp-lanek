@@ -6,6 +6,11 @@
  */
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import type { 
+  ConsumptionCreateRequest, 
+  ConsumptionCreateResponse, 
+  ConsumptionValidationError 
+} from '@/types/consumption';
 
 // API Base URL - defaults to localhost:5000 for development
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -193,6 +198,61 @@ export const api = {
     } catch {
       return false;
     }
+  },
+};
+
+/**
+ * Consumption API endpoints
+ */
+export const consumptionApi = {
+  /**
+   * Create a new consumption record
+   * @param consumptionData Consumption record data
+   * @param token JWT access token for authentication
+   * @returns Promise with consumption creation response
+   */
+  create: async (
+    consumptionData: ConsumptionCreateRequest, 
+    token: string
+  ): Promise<ConsumptionCreateResponse> => {
+    try {
+      const response = await apiClient.post<ConsumptionCreateResponse>(
+        '/api/consumption',
+        consumptionData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      // Handle validation errors specifically
+      if (error.status === 400 && error.data?.error === 'validation_error') {
+        throw {
+          error: error.data.error,
+          message: error.data.message,
+          details: error.data.details,
+        } as ConsumptionValidationError;
+      }
+      
+      // Re-throw with typed error for better handling in components
+      throw {
+        message: error.data?.message || error.message || 'Failed to create consumption record',
+        status: error.status,
+        error: error.data?.error,
+        details: error.data?.details,
+      } as ApiErrorResponse & { status?: number };
+    }
+  },
+
+  /**
+   * Health check endpoint for consumption service
+   * @returns Promise with health status
+   */
+  health: async (): Promise<{ status: string; service: string }> => {
+    const response = await apiClient.get('/api/consumption/health');
+    return response.data;
   },
 };
 

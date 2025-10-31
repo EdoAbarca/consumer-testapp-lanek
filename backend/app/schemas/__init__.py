@@ -1,11 +1,13 @@
 """
-Pydantic schemas for authentication endpoints.
+Pydantic schemas for authentication and consumption endpoints.
 
 This module contains request and response schemas for authentication
-operations like user registration and login.
+operations like user registration and login, as well as consumption
+data management.
 """
 
 import re
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -135,3 +137,72 @@ class SuccessResponse(BaseModel):
     success: bool = Field(default=True, description="Success status")
     message: str = Field(..., description="Success message")
     data: Optional[dict] = Field(default=None, description="Additional response data")
+
+
+# Consumption Schemas
+
+class ConsumptionCreateRequest(BaseModel):
+    """Schema for creating a new consumption record."""
+
+    date: datetime = Field(
+        ..., 
+        description="Date of the consumption (ISO format)",
+        examples=["2023-10-31T10:00:00Z"]
+    )
+    value: float = Field(
+        ..., 
+        gt=0, 
+        description="Consumption value (must be positive)",
+        examples=[150.75, 85.2, 25.0]
+    )
+    type: str = Field(
+        ..., 
+        description="Type of consumption",
+        examples=["electricity", "water", "gas"]
+    )
+    notes: Optional[str] = Field(
+        default=None, 
+        max_length=500,
+        description="Optional notes about the consumption",
+        examples=["High usage due to air conditioning", "Normal monthly reading"]
+    )
+
+    @field_validator("type")
+    @classmethod
+    def validate_consumption_type(cls, v: str) -> str:
+        """Validate consumption type."""
+        valid_types = ["electricity", "water", "gas"]
+        if v.lower() not in valid_types:
+            raise ValueError(f"Type must be one of: {', '.join(valid_types)}")
+        return v.lower()
+
+    @field_validator("date")
+    @classmethod
+    def validate_date_not_future(cls, v: datetime) -> datetime:
+        """Validate that consumption date is not in the future."""
+        if v > datetime.now():
+            raise ValueError("Consumption date cannot be in the future")
+        return v
+
+
+class ConsumptionResponse(BaseModel):
+    """Schema for consumption record response."""
+
+    id: int = Field(..., description="Unique consumption record ID")
+    user_id: int = Field(..., description="ID of the user who owns this record")
+    date: str = Field(..., description="ISO timestamp of consumption date")
+    value: float = Field(..., description="Consumption value")
+    type: str = Field(..., description="Type of consumption")
+    notes: Optional[str] = Field(default=None, description="Optional notes")
+    created_at: str = Field(..., description="ISO timestamp of record creation")
+    updated_at: str = Field(..., description="ISO timestamp of last update")
+
+
+class ConsumptionCreateResponse(BaseModel):
+    """Schema for consumption creation response."""
+
+    consumption: ConsumptionResponse = Field(..., description="Created consumption record")
+    message: str = Field(
+        default="Consumption record created successfully",
+        description="Success message"
+    )
