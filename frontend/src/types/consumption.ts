@@ -73,6 +73,35 @@ export interface ConsumptionFormErrors {
 }
 
 /**
+ * Pagination Metadata Interface
+ */
+export interface PaginationMetadata {
+  page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  has_prev: boolean;
+  has_next: boolean;
+}
+
+/**
+ * Consumption List Response Interface
+ */
+export interface ConsumptionListResponse {
+  consumptions: ConsumptionRecord[];
+  pagination: PaginationMetadata;
+  message: string;
+}
+
+/**
+ * Consumption List Request Parameters Interface
+ */
+export interface ConsumptionListParams {
+  page?: number;
+  per_page?: number;
+}
+
+/**
  * Type guard to check if a string is a valid consumption type
  */
 export function isValidConsumptionType(type: string): type is ConsumptionType {

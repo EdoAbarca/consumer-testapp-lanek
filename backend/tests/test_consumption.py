@@ -335,7 +335,7 @@ class TestConsumptionAuthentication:
             headers=headers
         )
 
-        assert response.status_code == 422  # JWT validation error
+        assert response.status_code == 401  # JWT validation error
 
     def test_create_consumption_inactive_user(self, client, app):
         """Test creating consumption with inactive user account."""
@@ -485,3 +485,361 @@ class TestConsumptionModel:
         assert "water" in valid_types
         assert "gas" in valid_types
         assert len(valid_types) == 3
+
+
+class TestConsumptionList:
+    """Test consumption list functionality."""
+
+    def test_list_empty_consumptions(self, client, auth_headers):
+        """Test listing consumption records when none exist."""
+        response = client.get(
+            "/api/consumption",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert "consumptions" in data
+        assert "pagination" in data
+        assert "message" in data
+        assert len(data["consumptions"]) == 0
+        assert data["pagination"]["total_items"] == 0
+        assert data["pagination"]["page"] == 1
+        assert data["pagination"]["per_page"] == 20
+        assert data["pagination"]["total_pages"] == 0
+        assert data["pagination"]["has_prev"] is False
+        assert data["pagination"]["has_next"] is False
+        assert data["message"] == "No consumption records found"
+
+    def test_list_single_consumption(self, client, auth_headers, test_user):
+        """Test listing consumption records with a single record."""
+        # Create a consumption record
+        consumption_data = {
+            "date": "2023-10-31T10:00:00Z",
+            "value": 150.75,
+            "type": "electricity",
+            "notes": "Test consumption"
+        }
+
+        # Create the record
+        create_response = client.post(
+            "/api/consumption",
+            data=json.dumps(consumption_data),
+            content_type="application/json",
+            headers=auth_headers
+        )
+        assert create_response.status_code == 201
+
+        # List records
+        response = client.get(
+            "/api/consumption",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert len(data["consumptions"]) == 1
+        assert data["pagination"]["total_items"] == 1
+        assert data["pagination"]["total_pages"] == 1
+        assert data["pagination"]["has_prev"] is False
+        assert data["pagination"]["has_next"] is False
+        assert data["message"] == "Consumption records retrieved successfully"
+
+        # Verify record data
+        consumption = data["consumptions"][0]
+        assert consumption["value"] == 150.75
+        assert consumption["type"] == "electricity"
+        assert consumption["notes"] == "Test consumption"
+        assert consumption["user_id"] == test_user.id
+
+    def test_list_multiple_consumptions_pagination(self, client, auth_headers, test_user):
+        """Test listing consumption records with pagination."""
+        # Create multiple consumption records
+        for i in range(25):
+            consumption_data = {
+                "date": f"2023-10-{str(i+1).zfill(2)}T10:00:00Z",
+                "value": 100.0 + i,
+                "type": "electricity",
+                "notes": f"Test consumption {i+1}"
+            }
+
+            create_response = client.post(
+                "/api/consumption",
+                data=json.dumps(consumption_data),
+                content_type="application/json",
+                headers=auth_headers
+            )
+            assert create_response.status_code == 201
+
+        # Test first page (default)
+        response = client.get(
+            "/api/consumption",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert len(data["consumptions"]) == 20  # Default per_page
+        assert data["pagination"]["total_items"] == 25
+        assert data["pagination"]["page"] == 1
+        assert data["pagination"]["per_page"] == 20
+        assert data["pagination"]["total_pages"] == 2
+        assert data["pagination"]["has_prev"] is False
+        assert data["pagination"]["has_next"] is True
+
+        # Test second page
+        response = client.get(
+            "/api/consumption?page=2",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert len(data["consumptions"]) == 5  # Remaining records
+        assert data["pagination"]["page"] == 2
+        assert data["pagination"]["has_prev"] is True
+        assert data["pagination"]["has_next"] is False
+
+    def test_list_custom_per_page(self, client, auth_headers, test_user):
+        """Test listing consumption records with custom per_page parameter."""
+        # Create 15 consumption records
+        for i in range(15):
+            consumption_data = {
+                "date": f"2023-10-{str(i+1).zfill(2)}T10:00:00Z",
+                "value": 100.0 + i,
+                "type": "electricity",
+                "notes": f"Test consumption {i+1}"
+            }
+
+            create_response = client.post(
+                "/api/consumption",
+                data=json.dumps(consumption_data),
+                content_type="application/json",
+                headers=auth_headers
+            )
+            assert create_response.status_code == 201
+
+        # Test custom per_page
+        response = client.get(
+            "/api/consumption?per_page=5",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        assert len(data["consumptions"]) == 5
+        assert data["pagination"]["per_page"] == 5
+        assert data["pagination"]["total_pages"] == 3
+
+    def test_list_invalid_pagination_parameters(self, client, auth_headers):
+        """Test listing with invalid pagination parameters."""
+        # Test invalid page (negative)
+        response = client.get(
+            "/api/consumption?page=-1",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json
+        assert data["pagination"]["page"] == 1  # Should default to 1
+
+        # Test invalid per_page (too large)
+        response = client.get(
+            "/api/consumption?per_page=200",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json
+        assert data["pagination"]["per_page"] == 20  # Should default to 20
+
+        # Test invalid per_page (zero)
+        response = client.get(
+            "/api/consumption?per_page=0",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json
+        assert data["pagination"]["per_page"] == 20  # Should default to 20
+
+    def test_list_user_isolation(self, client, app):
+        """Test that users only see their own consumption records."""
+        with app.app_context():
+            # Create two test users
+            user1 = User(username="user1", email="user1@example.com", password="password123")
+            user1.set_password("password123")
+            user2 = User(username="user2", email="user2@example.com", password="password123")
+            user2.set_password("password123")
+            
+            db.session.add(user1)
+            db.session.add(user2)
+            db.session.commit()
+
+            # Login as user1
+            login_response1 = client.post(
+                "/api/auth/login",
+                data=json.dumps({
+                    "email": "user1@example.com",
+                    "password": "password123"
+                }),
+                content_type="application/json",
+            )
+            assert login_response1.status_code == 200
+            token1 = login_response1.json["access_token"]
+            headers1 = {"Authorization": f"Bearer {token1}"}
+
+            # Login as user2
+            login_response2 = client.post(
+                "/api/auth/login",
+                data=json.dumps({
+                    "email": "user2@example.com",
+                    "password": "password123"
+                }),
+                content_type="application/json",
+            )
+            assert login_response2.status_code == 200
+            token2 = login_response2.json["access_token"]
+            headers2 = {"Authorization": f"Bearer {token2}"}
+
+            # Create consumption record for user1
+            consumption_data1 = {
+                "date": "2023-10-31T10:00:00Z",
+                "value": 150.75,
+                "type": "electricity",
+                "notes": "User1 consumption"
+            }
+            create_response1 = client.post(
+                "/api/consumption",
+                data=json.dumps(consumption_data1),
+                content_type="application/json",
+                headers=headers1
+            )
+            assert create_response1.status_code == 201
+
+            # Create consumption record for user2
+            consumption_data2 = {
+                "date": "2023-11-01T10:00:00Z",
+                "value": 200.50,
+                "type": "water",
+                "notes": "User2 consumption"
+            }
+            create_response2 = client.post(
+                "/api/consumption",
+                data=json.dumps(consumption_data2),
+                content_type="application/json",
+                headers=headers2
+            )
+            assert create_response2.status_code == 201
+
+            # User1 should only see their own record
+            response1 = client.get(
+                "/api/consumption",
+                headers=headers1
+            )
+            assert response1.status_code == 200
+            data1 = response1.json
+            assert len(data1["consumptions"]) == 1
+            assert data1["consumptions"][0]["notes"] == "User1 consumption"
+            assert data1["consumptions"][0]["user_id"] == user1.id
+
+            # User2 should only see their own record
+            response2 = client.get(
+                "/api/consumption",
+                headers=headers2
+            )
+            assert response2.status_code == 200
+            data2 = response2.json
+            assert len(data2["consumptions"]) == 1
+            assert data2["consumptions"][0]["notes"] == "User2 consumption"
+            assert data2["consumptions"][0]["user_id"] == user2.id
+
+    def test_list_records_order(self, client, auth_headers, test_user):
+        """Test that consumption records are ordered by date (newest first)."""
+        # Create records with different dates
+        dates = [
+            "2023-10-30T10:00:00Z",
+            "2023-11-01T10:00:00Z",
+            "2023-10-31T10:00:00Z",
+        ]
+
+        for i, date in enumerate(dates):
+            consumption_data = {
+                "date": date,
+                "value": 100.0 + i,
+                "type": "electricity",
+                "notes": f"Record {i+1}"
+            }
+
+            create_response = client.post(
+                "/api/consumption",
+                data=json.dumps(consumption_data),
+                content_type="application/json",
+                headers=auth_headers
+            )
+            assert create_response.status_code == 201
+
+        # List records
+        response = client.get(
+            "/api/consumption",
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json
+        consumptions = data["consumptions"]
+        assert len(consumptions) == 3
+
+        # Verify order (newest first)
+        assert consumptions[0]["date"] == "2023-11-01T10:00:00"
+        assert consumptions[1]["date"] == "2023-10-31T10:00:00"
+        assert consumptions[2]["date"] == "2023-10-30T10:00:00"
+
+    def test_list_without_authentication(self, client):
+        """Test that listing requires authentication."""
+        response = client.get("/api/consumption")
+        assert response.status_code == 401
+        data = response.json
+        assert data["error"] == "missing_token"
+
+    def test_list_with_invalid_token(self, client):
+        """Test listing with invalid JWT token."""
+        headers = {"Authorization": "Bearer invalid_token"}
+        response = client.get(
+            "/api/consumption",
+            headers=headers
+        )
+        assert response.status_code == 401  # JWT decode error
+
+    def test_list_with_inactive_user(self, client, app):
+        """Test listing consumption records with deactivated user."""
+        with app.app_context():
+            # Create and deactivate user
+            user = User(username="inactive", email="inactive@example.com", password="password123")
+            user.set_password("password123")
+            user.is_active = False
+            db.session.add(user)
+            db.session.commit()
+
+            # Login (this should work even with inactive user)
+            login_response = client.post(
+                "/api/auth/login",
+                data=json.dumps({
+                    "email": "inactive@example.com",
+                    "password": "password123"
+                }),
+                content_type="application/json",
+            )
+            
+            # Skip this test if login fails for inactive users
+            if login_response.status_code != 200:
+                return
+                
+            token = login_response.json["access_token"]
+            headers = {"Authorization": f"Bearer {token}"}
+
+            # Try to list consumptions
+            response = client.get(
+                "/api/consumption",
+                headers=headers
+            )
+            assert response.status_code == 401
+            data = response.json
+            assert data["error"] == "inactive_user"

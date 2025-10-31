@@ -7,7 +7,7 @@ data management.
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -180,7 +180,9 @@ class ConsumptionCreateRequest(BaseModel):
     @classmethod
     def validate_date_not_future(cls, v: datetime) -> datetime:
         """Validate that consumption date is not in the future."""
-        if v > datetime.now():
+        # Get current time with timezone awareness matching the input
+        now = datetime.now(timezone.utc) if v.tzinfo else datetime.now()
+        if v > now:
             raise ValueError("Consumption date cannot be in the future")
         return v
 
@@ -204,5 +206,27 @@ class ConsumptionCreateResponse(BaseModel):
     consumption: ConsumptionResponse = Field(..., description="Created consumption record")
     message: str = Field(
         default="Consumption record created successfully",
+        description="Success message"
+    )
+
+
+class PaginationMetadata(BaseModel):
+    """Schema for pagination metadata."""
+
+    page: int = Field(..., description="Current page number (1-based)")
+    per_page: int = Field(..., description="Number of items per page")
+    total_items: int = Field(..., description="Total number of items")
+    total_pages: int = Field(..., description="Total number of pages")
+    has_prev: bool = Field(..., description="Whether there is a previous page")
+    has_next: bool = Field(..., description="Whether there is a next page")
+
+
+class ConsumptionListResponse(BaseModel):
+    """Schema for consumption list response."""
+
+    consumptions: list[ConsumptionResponse] = Field(..., description="List of consumption records")
+    pagination: PaginationMetadata = Field(..., description="Pagination information")
+    message: str = Field(
+        default="Consumption records retrieved successfully",
         description="Success message"
     )

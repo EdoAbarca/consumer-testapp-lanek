@@ -9,7 +9,9 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import type { 
   ConsumptionCreateRequest, 
   ConsumptionCreateResponse, 
-  ConsumptionValidationError 
+  ConsumptionValidationError,
+  ConsumptionListResponse,
+  ConsumptionListParams
 } from '@/types/consumption';
 
 // API Base URL - defaults to localhost:5000 for development
@@ -253,6 +255,41 @@ export const consumptionApi = {
   health: async (): Promise<{ status: string; service: string }> => {
     const response = await apiClient.get('/api/consumption/health');
     return response.data;
+  },
+
+  /**
+   * Get consumption records list with pagination
+   * @param params Query parameters for pagination
+   * @param token JWT access token for authentication
+   * @returns Promise with consumption list response
+   */
+  list: async (
+    params: ConsumptionListParams = {},
+    token: string
+  ): Promise<ConsumptionListResponse> => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+      
+      const response = await apiClient.get<ConsumptionListResponse>(
+        `/api/consumption?${queryParams.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      // Re-throw with typed error for better handling in components
+      throw {
+        message: error.data?.message || error.message || 'Failed to fetch consumption records',
+        status: error.status,
+        error: error.data?.error,
+        details: error.data?.details,
+      } as ApiErrorResponse & { status?: number };
+    }
   },
 };
 
