@@ -67,13 +67,13 @@ def register():
       This endpoint allows new users to create an account with username,
       email, and password. It validates the input data, checks for email
       uniqueness, hashes the password, and stores the user in the database.
-      
+
       **Validation Rules:**
       - Username: 3-80 characters, alphanumeric with underscores/hyphens only
       - Email: Must be a valid email format
       - Password: Minimum 8 characters, must contain at least one letter and one number
       - Confirm Password: Must match the password field
-      
+
       **curl example:**
       ```bash
       curl -X POST "http://localhost:5000/api/auth/register" \
@@ -296,13 +296,13 @@ def login():
       This endpoint allows users to authenticate with their email and password.
       Upon successful authentication, it returns JWT access and refresh tokens
       along with user information.
-      
+
       **Authentication Flow:**
       - Validates email and password format
       - Checks if user exists and credentials are correct
       - Verifies user account is active
       - Returns JWT tokens for authenticated sessions
-      
+
       **curl example:**
       ```bash
       curl -X POST "http://localhost:5000/api/auth/login" \

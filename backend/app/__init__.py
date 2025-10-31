@@ -68,7 +68,9 @@ def create_app(config_class=Config):
     app.config["SWAGGER"] = {
         "title": "Consumer TestApp Lanek API",
         "version": "1.0.0",
-        "description": "Backend API for Consumer Data Management System - Lanek Technical Test",
+        "description": (
+            "Backend API for Consumer Data Management System - " "Lanek Technical Test"
+        ),
         "contact": {
             "name": "API Support",
             "email": "developer@example.com",
@@ -87,7 +89,10 @@ def create_app(config_class=Config):
                 "type": "apiKey",
                 "name": "Authorization",
                 "in": "header",
-                "description": 'JWT Authorization header using the Bearer scheme. Example: "Bearer {token}"',
+                "description": (
+                    "JWT Authorization header using the Bearer scheme. "
+                    'Example: "Bearer {token}"'
+                ),
             }
         },
         "definitions": {
@@ -398,7 +403,7 @@ def create_app(config_class=Config):
     swagger.init_app(app)
 
     # Import models to ensure they are registered with SQLAlchemy
-    from app.models import Consumption, User
+    from app.models import Consumption, User  # noqa: F401
 
     # Register blueprints
     from app.routes.auth import auth_bp

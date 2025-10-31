@@ -21,10 +21,8 @@ from app.schemas import (
     ConsumptionCreateResponse,
     ConsumptionListResponse,
     ConsumptionResponse,
-    ErrorResponse,
     MonthlyConsumption,
     PaginationMetadata,
-    ValidationErrorResponse,
 )
 
 consumption_bp = Blueprint("consumption", __name__)
@@ -72,7 +70,7 @@ def create_consumption():
     summary: Create consumption record
     description: |
       Create a new consumption record with validation.
-      
+
       **curl example:**
       ```bash
       curl -X POST "http://localhost:5000/api/consumption" \
@@ -244,16 +242,17 @@ def list_consumptions():
       - Consumption
     summary: List consumption records
     description: |
-      Retrieve consumption records for the authenticated user with optional pagination.
-      Records are ordered by date (newest first) and filtered to show only the current user's data.
-      
+      Retrieve consumption records for the authenticated user with optional
+      pagination. Records are ordered by date (newest first) and filtered
+      to show only the current user's data.
+
       **curl examples:**
       ```bash
       # Get all consumption records (first page)
       curl -X GET "http://localhost:5000/api/consumption" \
            -H "Authorization: Bearer YOUR_JWT_TOKEN" \
            -H "Content-Type: application/json"
-      
+
       # Get specific page with custom page size
       curl -X GET "http://localhost:5000/api/consumption?page=2&per_page=10" \
            -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -411,9 +410,9 @@ def dashboard():
       - Consumption
     summary: Get user dashboard
     description: |
-      Protected endpoint that requires JWT authentication. 
+      Protected endpoint that requires JWT authentication.
       Returns basic user information for dashboard display.
-      
+
       **curl example:**
       ```bash
       curl -X GET "http://localhost:5000/api/consumption/dashboard" \
@@ -498,10 +497,10 @@ def get_analytics():
     description: |
       Retrieve analytics data including total consumption, monthly averages,
       current vs last month comparison, and monthly data for charts.
-      
-      **Note**: This endpoint provides analytics functionality that may have been 
+
+      **Note**: This endpoint provides analytics functionality that may have been
       referenced as "/stats" in requirements, but is implemented as "/analytics".
-      
+
       **curl example:**
       ```bash
       curl -X GET "http://localhost:5000/api/consumption/analytics" \
@@ -662,7 +661,8 @@ def get_analytics():
             or 0.0
         )
 
-        # Calculate monthly data for charts (all historical data for comprehensive analytics)
+        # Calculate monthly data for charts (all historical data for
+        # comprehensive analytics)
         monthly_query = (
             base_query.with_entities(
                 extract("year", Consumption.date).label("year"),

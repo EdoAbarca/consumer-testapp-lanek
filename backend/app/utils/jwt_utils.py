@@ -1,15 +1,14 @@
 """
-JWT utilities for authentication and authorization.
+JWT (JSON Web Token) utilities for authentication and authorization.
 
-This module provides utilities for creating, validating, and managing JWT tokens
+This module provides functions and decorators for handling JWT tokens,
 for user authentication and authorization.
 """
 
-from datetime import datetime, timedelta
 from functools import wraps
 from typing import Dict, Optional
 
-from flask import current_app, request
+from flask import current_app
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,

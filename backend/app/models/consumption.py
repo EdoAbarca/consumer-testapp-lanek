@@ -7,11 +7,13 @@ records in the database.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 from app import db
 

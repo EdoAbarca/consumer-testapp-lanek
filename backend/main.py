@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from app import create_app
-from app.config import DevelopmentConfig, ProductionConfig
+from app import create_app  # noqa: E402
+from app.config import DevelopmentConfig, ProductionConfig  # noqa: E402
 
 # Determine configuration based on environment
 config_class = (

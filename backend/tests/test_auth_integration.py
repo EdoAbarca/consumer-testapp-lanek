@@ -152,7 +152,8 @@ class TestRegistrationIntegration:
             assert users[0].email == "duplicate@example.com"
 
     def test_registration_with_case_insensitive_email(self, client, app):
-        """Test that email case is normalized and duplicate detection works case-insensitively."""
+        """Test that email case is normalized and duplicate detection works
+        case-insensitively."""
         # Register with uppercase email
         registration_data = {
             "username": "casetest",

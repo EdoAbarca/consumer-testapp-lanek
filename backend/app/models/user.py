@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 import bcrypt
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

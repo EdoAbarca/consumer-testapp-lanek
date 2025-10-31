@@ -9,7 +9,6 @@ import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from flask import Flask
 
 from app import create_app, db
 from app.models.consumption import Consumption
@@ -342,7 +341,8 @@ class TestConsumptionAuthentication:
             data=json.dumps(login_data),
             content_type="application/json",
         )
-        # Login should fail for inactive user, but let's test the consumption endpoint too
+        # Login should fail for inactive user, but let's test the
+        # consumption endpoint too
 
         if response.status_code == 200:
             token = response.json["access_token"]
@@ -1037,7 +1037,8 @@ class TestConsumptionAnalytics:
         with app.app_context():
             user = User.query.get(test_user.id)
 
-            # Create consumption records in different months (not in chronological order)
+            # Create consumption records in different months
+            # (not in chronological order)
             consumption_records = [
                 # March 2023
                 Consumption(
