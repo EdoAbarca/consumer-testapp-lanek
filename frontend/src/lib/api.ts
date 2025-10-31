@@ -11,7 +11,8 @@ import type {
   ConsumptionCreateResponse, 
   ConsumptionValidationError,
   ConsumptionListResponse,
-  ConsumptionListParams
+  ConsumptionListParams,
+  AnalyticsResponse
 } from '@/types/consumption';
 
 // API Base URL - defaults to localhost:5000 for development
@@ -285,6 +286,33 @@ export const consumptionApi = {
       // Re-throw with typed error for better handling in components
       throw {
         message: error.data?.message || error.message || 'Failed to fetch consumption records',
+        status: error.status,
+        error: error.data?.error,
+        details: error.data?.details,
+      } as ApiErrorResponse & { status?: number };
+    }
+  },
+
+  /**
+   * Get consumption analytics data
+   * @param token JWT access token for authentication
+   * @returns Promise with analytics response
+   */
+  analytics: async (token: string): Promise<AnalyticsResponse> => {
+    try {
+      const response = await apiClient.get<AnalyticsResponse>(
+        '/api/consumption/analytics',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      // Re-throw with typed error for better handling in components
+      throw {
+        message: error.data?.message || error.message || 'Failed to fetch analytics data',
         status: error.status,
         error: error.data?.error,
         details: error.data?.details,
