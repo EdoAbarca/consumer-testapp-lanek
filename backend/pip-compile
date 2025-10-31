@@ -9,10 +9,11 @@ Since pip-tools has compatibility issues with newer pip versions in uv environme
 this script uses uv's native functionality to achieve the same result.
 """
 
-import sys
-import subprocess
 import os
+import subprocess
+import sys
 from pathlib import Path
+
 
 def main():
     """Main function to generate requirements.txt with hashes from pyproject.toml"""
