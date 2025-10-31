@@ -111,6 +111,63 @@ test-coverage: ## Run tests with coverage reports
 	@cd backend && uv run pytest --cov=app --cov-report=html --cov-report=term
 	@cd frontend && npm run test -- --coverage
 
+# Docker Orchestration
+docker-up: ## Start all services with Docker Compose
+	@echo "🐳 Starting all services with Docker Compose..."
+	@docker compose up -d
+	@echo "✅ Services started! Frontend: http://localhost:3000, Backend: http://localhost:5000"
+
+docker-dev: ## Start services in development mode with hot reload
+	@echo "🐳 Starting development environment with Docker Compose..."
+	@docker compose -f docker-compose.yml -f docker-compose.override.yml up
+	@echo "✅ Development environment started!"
+
+docker-prod: ## Start services in production mode
+	@echo "🐳 Starting production environment with Docker Compose..."
+	@docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	@echo "✅ Production environment started!"
+
+docker-build: ## Build all Docker images
+	@echo "🐳 Building Docker images..."
+	@docker compose build
+
+docker-down: ## Stop and remove all containers
+	@echo "🐳 Stopping and removing containers..."
+	@docker compose down
+
+docker-clean: ## Clean up Docker resources (containers, networks, volumes)
+	@echo "🐳 Cleaning up Docker resources..."
+	@docker compose down -v --remove-orphans
+	@docker system prune -f
+
+docker-logs: ## Show logs from all services
+	@echo "🐳 Showing Docker Compose logs..."
+	@docker compose logs -f
+
+docker-logs-backend: ## Show backend service logs
+	@echo "🐳 Showing backend service logs..."
+	@docker compose logs -f backend
+
+docker-logs-frontend: ## Show frontend service logs
+	@echo "🐳 Showing frontend service logs..."
+	@docker compose logs -f frontend
+
+docker-logs-db: ## Show database service logs
+	@echo "🐳 Showing database service logs..."
+	@docker compose logs -f postgres
+
+docker-restart: ## Restart all services
+	@echo "🐳 Restarting all services..."
+	@docker compose restart
+
+docker-status: ## Show status of all services
+	@echo "🐳 Docker Compose services status:"
+	@docker compose ps
+
+docker-health: ## Run comprehensive health check
+	@echo "🏥 Running health check..."
+	@./scripts/health-check.sh
+
 # Code Quality
 lint: ## Run linting on both backend and frontend
 	@echo "🔍 Running linting..."
