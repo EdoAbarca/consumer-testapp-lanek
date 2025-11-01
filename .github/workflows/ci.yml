@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  # Use BuildKit for better caching
+  DOCKER_BUILDKIT: 1
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
@@ -14,8 +18,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: test_db
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'password' }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'test_db' }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'postgres' }}
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -25,7 +30,8 @@ jobs:
           - 5432:5432
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -35,47 +41,355 @@ jobs:
     - name: Set up Python
       run: uv python install 3.11
     
-    - name: Install backend dependencies
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: backend/.venv
+        key: ${{ runner.os }}-python-${{ hashFiles('backend/pyproject.toml', 'backend/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-python-
+    
+    - name: Create backend .env file
       run: |
         cd backend
-        uv sync
+        cat > .env << 'EOF'
+        FLASK_ENV=testing
+        SECRET_KEY=${{ secrets.SECRET_KEY || 'ci-test-secret-key-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0' }}
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'ci-test-jwt-secret-key-z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0' }}
+        DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER || 'postgres' }}:${{ secrets.POSTGRES_PASSWORD || 'password' }}@localhost:5432/${{ secrets.POSTGRES_DB || 'test_db' }}
+        CORS_ORIGINS=http://localhost:3000
+        DEBUG=false
+        EOF
+    
+    - name: Install backend dependencies
+      run: make install-backend
+    
+    - name: Lint backend code
+      run: make lint-backend
     
     - name: Run backend tests
-      run: |
-        cd backend
-        uv run pytest
+      run: make test-backend
       env:
-        DATABASE_URL: postgresql://postgres:password@localhost:5432/test_db
+        DATABASE_URL: postgresql://${{ secrets.POSTGRES_USER || 'postgres' }}:${{ secrets.POSTGRES_PASSWORD || 'password' }}@localhost:5432/${{ secrets.POSTGRES_DB || 'test_db' }}
+    
+    - name: Build backend
+      run: make build-backend
 
   frontend-tests:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
     
+    - name: Cache Node.js dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          frontend/node_modules
+          frontend/.next/cache
+        key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.js', 'frontend/**/*.jsx', 'frontend/**/*.ts', 'frontend/**/*.tsx') }}
+        restore-keys: |
+          ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-
+          ${{ runner.os }}-nextjs-
+    
+    - name: Create frontend .env.local file
+      run: |
+        cd frontend
+        cat > .env.local << 'EOF'
+        NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api' }}
+        NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+        NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'ci-test-nextauth-secret-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' }}
+        NODE_ENV=test
+        EOF
+    
     - name: Install frontend dependencies
+      run: make install-frontend
+    
+    - name: Lint frontend code
+      run: make lint-frontend
+    
+    - name: Run frontend tests
+      run: make test-frontend
+    
+    - name: Build frontend
+      run: make build-frontend
+
+  docker-validation:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create backend .env file
+      run: |
+        cd backend
+        cat > .env << 'EOF'
+        FLASK_ENV=testing
+        SECRET_KEY=${{ secrets.SECRET_KEY || 'ci-test-secret-key-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0' }}
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'ci-test-jwt-secret-key-z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0' }}
+        DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER || 'postgres' }}:${{ secrets.POSTGRES_PASSWORD || 'password' }}@postgres:5432/${{ secrets.POSTGRES_DB || 'testdb' }}
+        CORS_ORIGINS=http://localhost:3000
+        DEBUG=false
+        EOF
+    
+    - name: Create frontend .env.local file
+      run: |
+        cd frontend
+        cat > .env.local << 'EOF'
+        NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api' }}
+        NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+        NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'ci-test-nextauth-secret-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' }}
+        NODE_ENV=test
+        EOF
+
+    - name: Create root .env file for Docker Compose
+      run: |
+        cat > .env << 'EOF'
+        # Database Configuration
+        POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'password' }}
+        POSTGRES_DB=${{ secrets.POSTGRES_DB || 'testdb' }}
+        POSTGRES_USER=${{ secrets.POSTGRES_USER || 'postgres' }}
+        
+        # Backend Configuration  
+        SECRET_KEY=${{ secrets.SECRET_KEY || 'ci-test-secret-key-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0' }}
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'ci-test-jwt-secret-key-z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0' }}
+        DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER || 'postgres' }}:${{ secrets.POSTGRES_PASSWORD || 'password' }}@postgres:5432/${{ secrets.POSTGRES_DB || 'testdb' }}
+        
+        # Frontend Configuration
+        NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api' }}
+        NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+        NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'ci-test-nextauth-secret-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' }}
+        EOF
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+    
+    - name: Build and validate Docker images
+      run: make docker-build
+    
+    - name: Test Docker containers startup
+      run: |
+        echo "🐳 Testing Docker containers can start successfully..."
+        make docker-up
+        sleep 30  # Give containers time to start
+        
+        echo "🔍 Checking container health..."
+        if ! make docker-health; then
+          echo "❌ Health check failed, showing container logs..."
+          make docker-logs
+          exit 1
+        fi
+        
+        echo "✅ Docker containers started successfully"
+        make docker-down
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js for frontend audit
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install uv for Python security check
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: backend/.venv
+        key: ${{ runner.os }}-python-security-${{ hashFiles('backend/pyproject.toml', 'backend/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-python-security-
+          ${{ runner.os }}-python-
+    
+    - name: Cache Node.js dependencies
+      uses: actions/cache@v4
+      with:
+        path: frontend/node_modules
+        key: ${{ runner.os }}-node-security-${{ hashFiles('frontend/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-security-
+          ${{ runner.os }}-nextjs-
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: Install frontend dependencies for audit
       run: |
         cd frontend
         npm ci
     
-    - name: Run frontend linting
+    - name: Install backend dependencies for security check
       run: |
-        cd frontend
-        npm run lint
+        cd backend
+        uv sync --dev
     
-    - name: Run frontend tests
+    - name: Run npm audit for frontend
       run: |
         cd frontend
-        npm run test
+        echo "🔍 Running frontend security audit..."
+        if npm audit --audit-level high; then
+          echo "✅ No high-severity vulnerabilities found in frontend"
+        else
+          echo "⚠️ Frontend audit found vulnerabilities - please review"
+          npm audit --audit-level high --json > frontend-audit.json || true
+          echo "Audit results saved to frontend-audit.json"
+        fi
     
-    - name: Build frontend
+    - name: Check for Python security issues
+      run: |
+        cd backend
+        echo "🔍 Running Python security check..."
+        uv add --dev safety
+        if uv run safety check; then
+          echo "✅ No Python security issues found"
+        else
+          echo "⚠️ Python security check found issues - please review"
+          uv run safety check --json > python-security.json || true
+          echo "Security results saved to python-security.json"
+        fi
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [docker-validation]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create backend .env file
+      run: |
+        cd backend
+        cat > .env << 'EOF'
+        FLASK_ENV=testing
+        SECRET_KEY=${{ secrets.SECRET_KEY || 'ci-test-secret-key-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0' }}
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'ci-test-jwt-secret-key-z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0' }}
+        DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER || 'postgres' }}:${{ secrets.POSTGRES_PASSWORD || 'password' }}@postgres:5432/${{ secrets.POSTGRES_DB || 'testdb' }}
+        CORS_ORIGINS=http://localhost:3000
+        DEBUG=false
+        EOF
+    
+    - name: Create frontend .env.local file
       run: |
         cd frontend
-        npm run build
+        cat > .env.local << 'EOF'
+        NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api' }}
+        NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+        NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'ci-test-nextauth-secret-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' }}
+        NODE_ENV=test
+        EOF
+
+    - name: Create root .env file for Docker Compose
+      run: |
+        cat > .env << 'EOF'
+        # Database Configuration
+        POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'password' }}
+        POSTGRES_DB=${{ secrets.POSTGRES_DB || 'testdb' }}
+        POSTGRES_USER=${{ secrets.POSTGRES_USER || 'postgres' }}
+        
+        # Backend Configuration  
+        SECRET_KEY=${{ secrets.SECRET_KEY || 'ci-test-secret-key-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0' }}
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY || 'ci-test-jwt-secret-key-z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0' }}
+        DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER || 'postgres' }}:${{ secrets.POSTGRES_PASSWORD || 'password' }}@postgres:5432/${{ secrets.POSTGRES_DB || 'testdb' }}
+        
+        # Frontend Configuration
+        NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api' }}
+        NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
+        NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'ci-test-nextauth-secret-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6' }}
+        EOF
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Start application stack
+      run: |
+        make docker-up
+        sleep 45  # Give more time for full stack startup
+    
+    - name: Run health checks
+      run: |
+        echo "🏥 Running comprehensive health checks..."
+        make docker-health
+        
+        echo "🔍 Testing API endpoints..."
+        # Test backend health endpoint
+        curl -f http://localhost:5000/health || exit 1
+        curl -f http://localhost:5000/api/health || exit 1
+        
+        echo "🌐 Testing frontend accessibility..."
+        # Test frontend is accessible
+        curl -f http://localhost:3000 || exit 1
+        
+        echo "✅ All integration tests passed"
+    
+    - name: Cleanup
+      if: always()
+      run: make docker-down
+
+  build-summary:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, docker-validation, security-scan, integration-tests]
+    if: always()
+    
+    steps:
+    - name: Build Summary
+      run: |
+        echo "🎉 CI Pipeline Summary:"
+        echo "Backend Tests: ${{ needs.backend-tests.result }}"
+        echo "Frontend Tests: ${{ needs.frontend-tests.result }}"
+        echo "Docker Validation: ${{ needs.docker-validation.result }}"
+        echo "Security Scan: ${{ needs.security-scan.result }}"
+        echo "Integration Tests: ${{ needs.integration-tests.result }}"
+        
+        if [[ "${{ needs.backend-tests.result }}" == "success" && \
+              "${{ needs.frontend-tests.result }}" == "success" && \
+              "${{ needs.docker-validation.result }}" == "success" && \
+              "${{ needs.security-scan.result }}" == "success" && \
+              "${{ needs.integration-tests.result }}" == "success" ]]; then
+          echo "✅ All checks passed! Ready for deployment."
+        else
+          echo "❌ Some checks failed. Please review and fix."
+          exit 1
+        fi

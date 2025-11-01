@@ -1,0 +1,168 @@
+/**
+ * Consumption Type Definitions
+ * 
+ * This module contains TypeScript interfaces and types for consumption data
+ * management functionality.
+ */
+
+/**
+ * Consumption Types Enum
+ */
+export type ConsumptionType = 'electricity' | 'water' | 'gas';
+
+/**
+ * Consumption Creation Request Interface
+ */
+export interface ConsumptionCreateRequest {
+  date: string; // ISO date string
+  value: number;
+  type: ConsumptionType;
+  notes?: string;
+}
+
+/**
+ * Consumption Record Interface
+ */
+export interface ConsumptionRecord {
+  id: number;
+  user_id: number;
+  date: string; // ISO date string
+  value: number;
+  type: ConsumptionType;
+  notes?: string;
+  created_at: string; // ISO date string
+  updated_at: string; // ISO date string
+}
+
+/**
+ * Consumption Creation Response Interface
+ */
+export interface ConsumptionCreateResponse {
+  consumption: ConsumptionRecord;
+  message: string;
+}
+
+/**
+ * Consumption Validation Error Interface
+ */
+export interface ConsumptionValidationError {
+  error: string;
+  message: string;
+  details: Record<string, string>;
+}
+
+/**
+ * Consumption Form Data Interface (for form state management)
+ */
+export interface ConsumptionFormData {
+  date: string;
+  value: string; // String for form input, converted to number on submit
+  type: ConsumptionType | '';
+  notes: string;
+}
+
+/**
+ * Consumption Form Errors Interface
+ */
+export interface ConsumptionFormErrors {
+  date?: string;
+  value?: string;
+  type?: string;
+  notes?: string;
+  general?: string;
+}
+
+/**
+ * Pagination Metadata Interface
+ */
+export interface PaginationMetadata {
+  page: number;
+  per_page: number;
+  total_items: number;
+  total_pages: number;
+  has_prev: boolean;
+  has_next: boolean;
+}
+
+/**
+ * Consumption List Response Interface
+ */
+export interface ConsumptionListResponse {
+  consumptions: ConsumptionRecord[];
+  pagination: PaginationMetadata;
+  message: string;
+}
+
+/**
+ * Consumption List Request Parameters Interface
+ */
+export interface ConsumptionListParams {
+  page?: number;
+  per_page?: number;
+}
+
+/**
+ * Type guard to check if a string is a valid consumption type
+ */
+export function isValidConsumptionType(type: string): type is ConsumptionType {
+  return ['electricity', 'water', 'gas'].includes(type);
+}
+
+/**
+ * Get display label for consumption type
+ */
+export function getConsumptionTypeLabel(type: ConsumptionType): string {
+  const labels: Record<ConsumptionType, string> = {
+    electricity: 'Electricity',
+    water: 'Water',
+    gas: 'Gas',
+  };
+  return labels[type];
+}
+
+/**
+ * Get all consumption types with labels
+ */
+export function getConsumptionTypeOptions(): Array<{ value: ConsumptionType; label: string }> {
+  return [
+    { value: 'electricity', label: 'Electricity' },
+    { value: 'water', label: 'Water' },
+    { value: 'gas', label: 'Gas' },
+  ];
+}
+
+/**
+ * Monthly Consumption Data Interface
+ */
+export interface MonthlyConsumption {
+  month: string; // YYYY-MM format
+  total: number;
+  electricity: number;
+  water: number;
+  gas: number;
+}
+
+/**
+ * Consumption Analytics Data Interface
+ */
+export interface ConsumptionAnalytics {
+  total_consumption: number;
+  average_monthly: number;
+  current_month_total: number;
+  last_month_total: number;
+  monthly_data: MonthlyConsumption[];
+  total_records: number;
+  consumption_by_type: {
+    electricity: number;
+    water: number;
+    gas: number;
+  };
+}
+
+/**
+ * Analytics Response Interface
+ */
+export interface AnalyticsResponse {
+  analytics: ConsumptionAnalytics;
+  message: string;
+}

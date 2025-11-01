@@ -32,12 +32,16 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     
     # Validation & Serialization
-    "pydantic>=2.5.0",
+    "pydantic[email]>=2.5.0",
     "marshmallow>=3.20.0",
     
     # Password Hashing
     "bcrypt>=4.1.0",
     "werkzeug>=3.0.0",
+    
+    # API Documentation
+    "flask-swagger-ui>=4.11.0",
+    "flasgger>=0.9.7",
     
     # Environment Management
     "python-dotenv>=1.0.0",
@@ -174,4 +178,6 @@ dev = [
     "black>=23.0.0",
     "isort",
     "pip-tools>=7.5.1",
+    "flake8>=7.3.0",
+    "mypy>=1.18.2",
 ]
